@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<webtop>
+	<section id="admin">
+		<subsection id="security">
+			<menu id="apimenu" sequence="200" label="API">
+				<menuitem id="accesskeys" sequence="10" label="Access Keys" typename="apiAccessKey" />
+			</menu>
+		</subsection>
+	</section>
+</webtop>
