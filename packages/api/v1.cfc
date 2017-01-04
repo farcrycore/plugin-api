@@ -21,11 +21,11 @@ component extends="base" {
 
 		if (arguments.pagesize lt 1 or arguments.pagesize gt 100) {
 			addError(code="202", detail="pagesize must be between 1 and 100");
-			return;
 		}
-
 		if (not listFindNoCase("datetimeLastUpdated asc,datetimeLastUpdated desc", arguments.order)) {
 			addError(code="202", detail="Order must be one of (datetimeLastUpdated asc|datetimeLastUpdated desc)");
+		}
+		if (errorCount()) {
 			return;
 		}
 

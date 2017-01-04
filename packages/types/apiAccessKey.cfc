@@ -22,7 +22,7 @@ component extends="farcry.core.packages.types.types" displayName="API Access Key
 			 ftHint="This value is used for key authentication. This will be set automatically on save if empty.";
 
 	property name="authorization" type="longchar" ftDefault="{}"
-			 ftSeq="6" ftFieldSet="Access Key" ftLabel="Authorization" ftOperations="list,get"
+			 ftSeq="6" ftFieldSet="Access Key" ftLabel="Authorization" ftOperations="list,get,create,update,delete"
 			 ftHint="The operations that this key is authorized to access.";
 
 

@@ -629,10 +629,11 @@ component {
 
 
 	// construct error response
-	public void function addError(required struct req, required struct res, required numeric code, string message, string detail, string field, string in, any debug, boolean clearContent=true){
+	public void function addError(required struct req, required struct res, required string code, string message, string detail, string field, string in, any debug, boolean clearContent=true){
 		var err = {
 			"code" = numberformat(arguments.code, "000")
 		};
+		var errors = isDefined("arguments.res.content.errors") ? arguments.res.content.errors : [];
 
 		// use default message if necessary
 		if (structKeyExists(arguments, "message")) {
@@ -670,7 +671,17 @@ component {
 			}
 		}
 
-		arrayappend(arguments.res.errors, err);
+		arrayappend(errors, err);
+		addResponse("errors", errors);
+	}
+
+	public numeric function errorCount(required struct req, required struct res) {
+		if (isDefined("arguments.res.content.errors")) {
+			return arrayLen(arguments.res.content.errors);
+		}
+		else {
+			return 0;
+		}
 	}
 
 	public void function setResponse(required struct res, required struct data) {

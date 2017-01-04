@@ -52,6 +52,10 @@ component {
 		application.fc.lib.api.addError(req=request.req, res=request.res, argumentCollection=arguments);
 	}
 
+	public numeric function errorCount() {
+		return application.fc.lib.api.errorCount(res=request.res, res=request.res);
+	}
+
 	public void function setResponse(required struct data) {
 		application.fc.lib.api.setResponse(res=request.res, res=request.res, argumentCollection=arguments);
 	}

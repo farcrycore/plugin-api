@@ -12,7 +12,7 @@ component {
 			arguments.stSwagger = deserializeJSON(fileRead(swaggerBase));
 			arguments.stSwagger.info.version = listLast(arguments.metadata.fullname, ".");
 			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
-			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#");
+			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#", alternateHTML="");
 			//arguments.stSwagger.host = application.fc.lib.seo.getCanonicalDomain(bUseHostname=true);
 			arguments.stSwagger.schemes = listToArray(application.fapi.getConfig("api", "schemes", "http"));
 			//arguments.stSwagger.basePath = "";
