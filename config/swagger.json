@@ -7,12 +7,24 @@
 	},
 	"schemes" : [],
 	"produces" : ["json"],
+	"tags" : [],
 	"paths" : {},
 	"definitions" : {
 		"Status" : {
 			"properties" : {
 				"version" : {
 					"type" : "string"
+				}
+			}
+		},
+		"ItemReference" : {
+			"properties" : {
+				"typename" : {
+					"type" : "string"
+				},
+				"objectid" : {
+					"type" : "string",
+					"format" : "uuid"
 				}
 			}
 		},
@@ -35,6 +47,16 @@
 						"in" : "string",
 						"detail" : "string"
 					}
+				}
+			}
+		},
+		"SuccessfulRequest" : {
+			"properties" : {
+				"ok" : {
+					"type" : "boolean"
+				},
+				"message" : {
+					"type" : "string"
 				}
 			}
 		}

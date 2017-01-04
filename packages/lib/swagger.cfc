@@ -10,9 +10,9 @@ component {
 
 		if (not structKeyExists(arguments, "stSwagger")) {
 			arguments.stSwagger = deserializeJSON(fileRead(swaggerBase));
-			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
-			arguments.stSwagger.info.description = structKeyExists(arguments.metadata, "description") ? arguments.metadata.description : "";
 			arguments.stSwagger.info.version = listLast(arguments.metadata.fullname, ".");
+			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
+			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#");
 			//arguments.stSwagger.host = application.fc.lib.seo.getCanonicalDomain(bUseHostname=true);
 			arguments.stSwagger.schemes = listToArray(application.fapi.getConfig("api", "schemes", "http"));
 			//arguments.stSwagger.basePath = "";
@@ -84,68 +84,15 @@ component {
 
 		for (typename in arguments.typenames) {
 			arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
+			arrayAppend(arguments.stSwagger.tags, {
+				"name" = application.fapi.getContentTypeMetadata(typename=typename, md="displayname", default=typename),
+				"description" = application.fapi.getContentTypeMetadata(typename=typename, md="hint", default="")
+			});
 		}
 
 		for (methodIn in arguments.metadata.functions) {
 			if (structKeyExists(methodIn, "handle") and (not structKeyExists(methodIn, "document") or methodIn.document eq true)) {
-				handle = listToArray(trim(methodIn.handle), " ");
-				if (arrayLen(handle) eq 2) {
-					handle[2] = arguments.prefix & handle[2];
-				}
-				else {
-					handle[2] = arguments.prefix;
-				}
-				method = lcase(handle[1]);
-				path = handle[2];
-
-				if (not structKeyExists(arguments.stSwagger.paths, path)) {
-					arguments.stSwagger.paths[path] = {};
-				}
-
-				arguments.stSwagger.paths[path][method] = getSwaggerMethod(metadata=methodIn, typenames=arguments.typenames);
-
-				if (isSimpleValue(arguments.stSwagger.paths[path][method].responses["200"])) {
-					if (reFind("^\w+(:.*)$", arguments.stSwagger.paths[path][method].responses["200"])) {
-						typename = arguments.stSwagger.paths[path][method].responses["200"];
-
-						if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
-							arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-						}
-
-						arguments.stSwagger.paths[path][method].responses["200"] = {
-							"schema" = {
-								"$ref": "##/definitions/#typename#"
-							},
-							"description" = ""
-						};
-
-						if (find(":", arguments.stSwagger.paths[path][method].responses["200"].schema["$ref"])) {
-							methodOut.responses[attr]["description"] = listRest(arguments.stSwagger.paths[path][method].responses["200"].schema["$ref"], ":");
-							methodOut.responses[attr].schema.items["$ref"] = listFirst(arguments.stSwagger.paths[path][method].responses["200"].schema["$ref"], ":");
-						}
-					}
-					else if (reFind("^\[\]\w+$", arguments.stSwagger.paths[path][method].responses["200"])) {
-						typename = mid(arguments.stSwagger.paths[path][method].responses["200"], 3, len(arguments.stSwagger.paths[path][method].responses["200"]));
-
-						if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
-							arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-						}
-
-						arguments.stSwagger.paths[path][method].responses["200"] = {
-							"schema" = {
-								"type" = "array",
-								"items" = {
-									"$ref" = "##/definitions/#typename#"
-								}
-							}
-						};
-
-						if (find(":", arguments.stSwagger.paths[path][method].responses["200"].schema.items["$ref"])) {
-							methodOut.responses[attr].description = listRest(arguments.stSwagger.paths[path][method].responses["200"].schema.items["$ref"], ":");
-							methodOut.responses[attr].schema.items["$ref"] = listFirst(arguments.stSwagger.paths[path][method].responses["200"].schema.items["$ref"], ":");
-						}
-					}
-				}
+				addSwaggerMethod(swagger=arguments.stSwagger, prefix=arguments.prefix, typenames=arguments.typenames, metadata=methodIn);
 			}
 		}
 
@@ -156,13 +103,27 @@ component {
 		return arguments.stSwagger;
 	}
 
-	public struct function getSwaggerMethod(required struct metadata, required array typenames) {
+	public void function addSwaggerMethod(required struct swagger, required string prefix, required array typenames, required struct metadata) {
 		var methodOut = {
 			"parameters" = []
 		};
 		var paramIn = {};
 		var attr = ""
 		var definition = "";
+		var handle = listToArray(trim(metadata.handle), " ");
+		var typename = "";
+		var altMethod = {};
+		var expandTypename = 0;
+
+		// method and path
+		if (arrayLen(handle) eq 2) {
+			handle[2] = arguments.prefix & handle[2];
+		}
+		else {
+			handle[2] = arguments.prefix;
+		}
+		methodOut["x-method"] = lcase(handle[1]);
+		methodOut["x-path"] = handle[2];
 
 		if (structKeyExists(arguments.metadata, "displayname")) {
 			methodOut["summary"] = arguments.metadata.displayname;
@@ -176,28 +137,92 @@ component {
 			methodOut["tags"] = listToArray(arguments.metadata.tags);
 		}
 
+		if (structKeyExists(arguments.metadata, "permission")) {
+			methodOut["x-permission"] = arguments.metadata.permission;
+		}
+		else {
+			methodOut["x-permission"] = "public";
+		}
+
 		if (structKeyExists(arguments.metadata, "parameters") and arrayLen(arguments.metadata.parameters)) {
 			for (paramIn in arguments.metadata.parameters) {
-				arrayAppend(methodOut.parameters, getSwaggerParameter(paramIn));
+				if (structKeyExists(paramIn, "swagger_type") and paramIn.swagger_type eq "typename") {
+					expandTypename = arrayLen(methodOut.parameters) + 1;
+				}
+				else {
+					arrayAppend(methodOut.parameters, getSwaggerParameter(paramIn));
+				}
 			}
 		}
 
 		methodOut["responses"] = {};
 		for (attr in arguments.metadata) {
 			if ((len(attr) eq 3 and isNumeric(attr)) or attr eq "default") {
-				methodOut.responses[attr] = getSwaggerResponse(arguments.metadata[attr]);
-
-				if (reFindNoCase("^(\[\])?##/definitions/ContentType", arguments.metadata[attr])) {
-					for (paramIn in methodOut.parameters) {
-						if (paramIn.name eq "typename") {
-							paramIn["enum"] = arguments.typenames;
-						}
-					}
-				}
+				methodOut.responses[attr] = arguments.metadata[attr];
 			}
 		}
 
-		return methodOut;
+		if (expandTypename) {
+			for (typename in arguments.typenames) {
+				altMethod = duplicate(methodOut);
+				altMethod["x-path"] = subsituteTypeParameters(typename=typename, input=altMethod["x-path"]);
+				altMethod["x-permission"] = subsituteTypeParameters(typename=typename, input=altMethod["x-permission"]);
+				altMethod["summary"] = subsituteTypeParameters(typename=typename, input=altMethod["summary"]);
+				altMethod["description"] = subsituteTypeParameters(typename=typename, input=altMethod["description"]);
+				altMethod["tags"] = subsituteTypeParameters(typename=typename, input=altMethod["tags"]);
+
+				for (attr in altMethod.responses) {
+					altMethod.responses[attr] = subsituteTypeParameters(typename=typename, input=altMethod.responses[attr]);
+					altMethod.responses[attr] = getSwaggerResponse(altMethod.responses[attr]);
+				}
+
+				for (paramIn in altMethod.parameters) {
+					if (structKeyExists(paramIn, "schema")) {
+						paramIn.schema = subsituteTypeParameters(typename=typename, input=paramIn.schema);
+						paramIn.schema = getSwaggerResponse(paramIn.schema);
+					}
+				}
+
+				if (not structKeyExists(arguments.swagger.paths, altMethod["x-path"])) {
+					arguments.swagger.paths[altMethod["x-path"]] = {};
+				}
+
+				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
+
+				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
+					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true)
+				}
+
+				structDelete(altMethod, "x-path");
+				structDelete(altMethod, "x-method");
+			}
+		}
+		else {
+			for (attr in methodOut.responses) {
+				methodOut.responses[attr] = getSwaggerResponse(methodOut.responses[attr]);
+			}
+
+			for (paramIn in methodOut.parameters) {
+				if (structKeyExists(paramIn, "schema")) {
+					paramIn.schema = getSwaggerResponse(paramIn.schema);
+				}
+			}
+
+			if (not structKeyExists(arguments.swagger.paths, methodOut["x-path"])) {
+				arguments.swagger.paths[methodOut["x-path"]] = {};
+			}
+
+			arguments.swagger.paths[methodOut["x-path"]][methodOut["x-method"]] = methodOut;
+
+			if (not structKeyExists(arguments.swagger.paths, methodOut["x-path"])) {
+				arguments.swagger.paths[methodOut["x-path"]] = {};
+			}
+
+			arguments.swagger.paths[methodOut["x-path"]][methodOut["x-method"]] = methodOut;
+
+			structDelete(methodOut, "x-path");
+			structDelete(methodOut, "x-method");
+		}
 	}
 
 	public struct function getSwaggerParameter(required struct metadata) {
@@ -209,14 +234,24 @@ component {
 			"type" = structKeyExists(arguments.metadata, "swagger_type") ? arguments.metadata.swagger_type : "string"
 		};
 
-		if (structKeyExists(arguments.metadata, "swagger_format")) {
-			paramOut["format"] = arguments.metadata.swagger_format;
+		if (structKeyExists(arguments.metadata, "in") and arguments.metadata.in eq "body") {
+			if (structKeyExists(arguments.metadata, "swagger_schema")) {
+				paramOut["schema"] = arguments.metadata.swagger_schema;
+			}
+			else {
+				throw(message="Parameters in 'body' must define a swagger_schema");
+			}
 		}
-		if (structKeyExists(arguments.metadata, "default")) {
-			paramOut["default"] = arguments.metadata.default;
-		}
-		if (structKeyExists(arguments.metadata, "enum")) {
-			paramOut["enum"] = listToArray(arguments.metadata.enum);
+		else {
+			if (structKeyExists(arguments.metadata, "swagger_format")) {
+				paramOut["format"] = arguments.metadata.swagger_format;
+			}
+			if (structKeyExists(arguments.metadata, "default")) {
+				paramOut["default"] = arguments.metadata.default;
+			}
+			if (structKeyExists(arguments.metadata, "enum")) {
+				paramOut["enum"] = listToArray(arguments.metadata.enum);
+			}
 		}
 
 		return paramOut;
@@ -233,14 +268,14 @@ component {
 		def = listFirst(trim(arguments.definition), ":");
 		desc = listRest(trim(arguments.definition), ":");
 
-		if (refind("^\[\]##", def)) {
+		if (refind("^\[\]##\w", def)) {
 			return {
 				"schema" = {
 					"properties" = {
 						"items" = {
 							"type" = "array",
 							"items" = {
-								"$ref" = mid(def, "3", len(def))
+								"$ref" = "##/definitions/" & mid(def, "4", len(def))
 							}
 						},
 						"page" = {
@@ -260,6 +295,15 @@ component {
 				"description" = desc
 			}
 		}
+		else if (refind("^##\w", arguments.definition)) {
+			// specific type as an item
+			return {
+				"schema" = {
+					"$ref": "##/definitions/" & mid(def, 2, len(def))
+				},
+				"description" = desc
+			};
+		}
 		else if (refind("^##", arguments.definition)) {
 			// specific type as an item
 			return {
@@ -270,11 +314,11 @@ component {
 			};
 		}
 		else {
-			return arguments.definition;
+			throw(message="Invalid response definition: #arguments.definition#");
 		}
 	}
 
-	public struct function getSwaggerDefinition(required string typename) {
+	public struct function getSwaggerDefinition(required string typename, boolean forUpdate=false) {
 		var o = application.fapi.getContentType(typename=arguments.typename);
 		var properties = {};
 		var prop = "";
@@ -284,7 +328,7 @@ component {
 		}
 		
 		for (prop in application.stCOAPI[arguments.typename].stProps) {
-			if (prop eq "objectid") {
+			if ((arguments.forUpdate and listFindNoCase("farcry.core.packages.types.types", application.stCOAPI[arguments.typename].stProps[prop].origin)) OR (not arguments.forUpdate and prop eq "objectid")) {
 				continue;
 			}
 
@@ -296,7 +340,7 @@ component {
 			switch (application.fapi.getPropertyMetadata(typename=arguments.typename, property=prop, md="ftType", default=application.stCOAPI[arguments.typename].stProps[prop].metadata.type)) {
 			case "array":
 				properties[prop].type = "array";
-				properties[prop]["items"] = { "type" = "string", "format" = "uuid" };
+				properties[prop]["items"] = { "$ref" = "##/definitions/ItemReference" };
 				break;
 			case "boolean":
 				properties[prop].type = "boolean";
@@ -309,12 +353,16 @@ component {
 				else {
 					properties[prop]["format"] = "date";
 				}
+				properties[prop]["allowEmptyValue"] = true;
 				break;
 			case "email":
 				properties[prop]["format"] = "email";
 				break;
 			case "integer":
 				properties[prop].type = "integer";
+				break;
+			case "list":
+				properties[prop].type = { "type" = "array", "items" = { "type"="string" } };
 				break;
 			case "numeric":
 				properties[prop].type = "float";
@@ -329,21 +377,52 @@ component {
 				properties[prop]["format"] = "url";
 				break;
 			case "uuid":
-				properties[prop]["format"] = "uuid";
+				properties[prop] = { "$ref"="##/definitions/ItemReference" };
 				break;
 			}
 		}
 
-		return {
-			"type" = "object",
-			"description" = application.fapi.getContentTypeMetadata(typename=arguments.typename, md="hint", default=""),
-			"allOf" = [{
-				"$ref" = "##/definitions/ContentType"
-			},{
+		if (arguments.forUpdate) {
+			return {
 				"type" = "object",
-				"properties" = properties
-			}]
-		};
+				"description" = "Update object for " & application.fapi.getContentTypeMetadata(typename=arguments.typename, md='displayname', default=arguments.typename),
+				"schema" = {
+					"type" = "object",
+					"properties" = properties
+				}
+			};
+		}
+		else {
+			return {
+				"type" = "object",
+				"description" = application.fapi.getContentTypeMetadata(typename=arguments.typename, md="hint", default=""),
+				"allOf" = [{
+					"$ref" = "##/definitions/ContentType"
+				},{
+					"type" = "object",
+					"properties" = properties
+				}]
+			};
+		}
+	}
+
+	public any function subsituteTypeParameters(required any input, required string typename) {
+		var i = 0;
+
+		if (isArray(arguments.input)) {
+			for (i=1; i<=arrayLen(arguments.input); i++) {
+				arguments.input[i] = subsituteTypeParameters(input=arguments.input[i], typename=arguments.typename);
+			}
+
+			return arguments.input;
+		}
+		else {
+			arguments.input = replaceNoCase(arguments.input, "{typename}", arguments.typename, "ALL");
+			arguments.input = replaceNoCase(arguments.input, "{typelabel}", application.fapi.getContentTypeMetadata(typename=arguments.typename, md="displayname", default=arguments.typename), "ALL");
+			arguments.input = replaceNoCase(arguments.input, "{typehint}", application.fapi.getContentTypeMetadata(typename=arguments.typename, md="hint", default=""), "ALL");
+
+			return arguments.input;
+		}
 	}
 
 }

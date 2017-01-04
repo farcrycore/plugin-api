@@ -83,7 +83,9 @@
 						docExpansion: "none",
 						jsonEditor: false,
 						defaultModelRendering: 'schema',
-						showRequestHeaders: false
+						showRequestHeaders: false,
+				        apisSorter: "alpha",
+				        operationsSorter: "alpha"
 					});
 
 					window.swaggerUi.load();

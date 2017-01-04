@@ -1,20 +1,37 @@
 component {
 
 	// NOTE: cases where more than one error is returned will always be all 401 Unauthorized, or 500 Internal Server Error
+	this.codeTypeHints = [{
+		"title" = "0xx API",
+		"hint" = "Error codes begining with `0` will always be basic errors accessing the API.",
+		"codes" = ["001","002","003","004","005"]
+	},{
+		"title" = "1xx Authorization",
+		"hint" = "Error codes begining with `1` will always be authorization errors.",
+		"codes" = ["101","102","103","104","105"]
+	},{
+		"title" = "2xx Request",
+		"hint" = "Error codes beginning with `2` will always be request validation errors. Responses will be `400 Bad Request`.",
+		"codes" = ["201","202","203"]
+	},{
+		"title" = "999 Unknown",
+		"hint" = "If we generate an unexpected error, we will return an error with this code, as well as logging it internally. Response will be `500 Internal Server Error`.",
+		"codes" = ["999"]
+	}];
 	this.codes = {
 		// basic request errors
-		"001" = { "message"="Request does not match a valid endpoint", "status"="404 Not Found" },
-		"002" = { "message"="This endpoint does not support that HTTP method", "status"="405 Method Not Allowed" },
-		"003" = { "message"="This API does not support the requested Accept headers", "status"="406 Not Acceptable" },
-		"004" = { "message"="This API does not support the provided content-type", "status"="415 Unsupported Media Type" },
-		"005" = { "message"="This API does not allow requests from that Origin", "status"="403 Forbidden" },
+		"001" = { "message"="Request does not match a valid endpoint", "status"="404 Not Found", "type"="0xx API" },
+		"002" = { "message"="This endpoint does not support that HTTP method", "status"="405 Method Not Allowed", "type"="0xx API" },
+		"003" = { "message"="This API does not support the requested Accept headers", "status"="406 Not Acceptable", "type"="0xx API" },
+		"004" = { "message"="This API does not support the provided content-type", "status"="415 Unsupported Media Type", "type"="0xx API" },
+		"005" = { "message"="This API does not allow requests from that Origin", "status"="403 Forbidden", "type"="0xx API" },
 
 		// security errors
-		"101" = { "message"="Invalid credentials", "status"="401 Unauthorized" },
-		"102" = { "message"="Missing Date or Timestamp header", "status"="401 Unauthorized" },
-		"103" = { "message"="Timestamp was too far from server time", "status"="401 Unauthorized" },
-		"104" = { "message"="Authorization signature did not match", "status"="401 Unauthorized" },
-		"105" = { "message"="User is not authorized for this request", "status"="401 Unauthorized" },
+		"101" = { "message"="Invalid credentials", "status"="401 Unauthorized", "type"="1xx Authorization" },
+		"102" = { "message"="Missing Date or Timestamp header", "status"="401 Unauthorized", "type"="1xx Authorization" },
+		"103" = { "message"="Timestamp was too far from server time", "status"="401 Unauthorized", "type"="1xx Authorization" },
+		"104" = { "message"="Authorization signature did not match", "status"="401 Unauthorized", "type"="1xx Authorization" },
+		"105" = { "message"="User is not authorized for this request", "status"="401 Unauthorized", "type"="1xx Authorization" },
 
 		// parameter validation errors
 		"201" = { "message"="Missing required parameter", "status"="400 Bad Request" },
@@ -87,7 +104,7 @@ component {
 
 				this.apis[apiname] = o;
 				this.swagger[apiname] = swagger.getSwaggerAPI(metadata=stMD, prefix=this.apiPrefix & "/" & apiname, typenames=listToArray(application.fapi.getConfig("api", "contentTypes", "")));
-				addHandlers(name=apiname, metadata=stMD, swagger=this.swagger[apiname]);
+				addHandlers(name=apiname, metadata=stMD);
 			}
 		}
 	}
@@ -100,7 +117,7 @@ component {
 		return this.apiList;
 	}
 
-	public void function addHandlers(required string name, required struct metadata, required struct swagger) {
+	public void function addHandlers(required string name, required struct metadata) {
 		var stHandler = {};
 		var method = "";
 		var path = {};
@@ -121,11 +138,17 @@ component {
 					"function" = func.name,
 					"method" = lcase(listFirst(func.handle, " ")),
 					"parts" = {},
-					"parameters" = structKeyExists(arguments.swagger.paths, path) ? arguments.swagger.paths[path][method].parameters : [],
+					"parameters" = [],
 					"path" = path,
 					"permission" = structKeyExists(func, "permission") ? func.permission : "public",
 					"attrs" = duplicate(func)
 				};
+
+				if (structKeyExists(func, "parameters") and arrayLen(func.parameters)) {
+					for (i in func.parameters) {
+						arrayAppend(stHandler.parameters, application.fc.lib.swagger.getSwaggerParameter(i));
+					}
+				}
 
 				stHandler["regex"] = "^" & rereplace(path, '\{[^\}]+\}', '[^\/]+', 'ALL') & "$";
 				stHandler["java_regex"] = createObject("java", "java.util.regex.Pattern").compile( javaCast( "string", stHandler.regex ) );
@@ -374,12 +397,7 @@ component {
 				}
 				break;
 			case "body":
-				if (structKeyExists(arguments.req.content, parameter.name)) {
-					parameters[parameter.name] = arguments.req.content[parameter.name];
-				}
-				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
-				}
+				parameters[parameter.name] = arguments.req.content;
 				break;
 			case "form":
 				if (structKeyExists(arguments.req.form, parameter.name)) {
@@ -553,7 +571,14 @@ component {
 	}
 
 	public boolean function checkPermission(required struct req, required string permission, string typename="") {
+		if (find(":", arguments.permission)) {
+			arguments.typename = listFirst(arguments.permission, ":");
+			arguments.permission = listLast(arguments.permission, ":");
+		}
+
 		switch (arguments.req.authentication) {
+			case "basic":
+				return true;
 			case "key":
 				return structKeyExists(arguments.req.user.authorization, arguments.typename) and structKeyExists(arguments.req.user.authorization[arguments.typename], arguments.permission) and arguments.req.user.authorization[arguments.typename][arguments.permission];
 			case "basic":
@@ -636,7 +661,9 @@ component {
 				"form" = arguments.req.form,
 				"cgi_query_string" = cgi.query_string,
 				"headers" = arguments.req.headers,
-				"content" = arguments.req.content
+				"content" = arguments.req.content,
+				"parameters" = structKeyExists(arguments.req, "parameters") ? arguments.req.parameters : {},
+				"handler" = structKeyExists(arguments.req, "handler") ? arguments.req.handler : {}
 			});
 			if (structKeyExists(arguments, "debug")) {
 				addResponse(res=arguments.res, key="x-debug", data=arguments.debug);
@@ -656,6 +683,25 @@ component {
 
 	public void function clearResponse(required struct res) {
 		arguments.res.content = {};
+	}
+
+	public query function getErrorCodes() {
+		var q = queryNew("type,typeHint,code,message,status");
+		var type = {};
+		var code = "";
+
+		for (type in this.codeTypeHints) {
+			for (code in type.codes) {
+				queryAddRow(q);
+				querySetCell(q, "type", type.title);
+				querySetCell(q, "typeHint", type.hint);
+				querySetCell(q, "code", code);
+				querySetCell(q, "message", structKeyExists(this.codes[code], "message") ? this.codes[code].message : "");
+				querySetCell(q, "status", this.codes[code].status);
+			}
+		}
+
+		return q;
 	}
 
 }
