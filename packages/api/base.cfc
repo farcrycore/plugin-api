@@ -53,7 +53,7 @@ component {
 	}
 
 	public numeric function errorCount() {
-		return application.fc.lib.api.errorCount(res=request.res, res=request.res);
+		return application.fc.lib.api.errorCount(req=request.req, res=request.res);
 	}
 
 	public void function setResponse(required struct data) {
@@ -94,7 +94,7 @@ component {
 		}
 
 		// otherwise, use the swagger definition to clean up the response
-		swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename].allOf[2].properties;
+		swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename].properties;
 		stResult = {
 			"objectid" = arguments.stObject.objectid,
 			"typename" = arguments.stObject.typename

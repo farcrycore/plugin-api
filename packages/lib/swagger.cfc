@@ -18,24 +18,6 @@ component {
 			//arguments.stSwagger.basePath = "";
 			arguments.stSwagger.produces = ["text/json","text/html"];
 			arguments.stSwagger.paths = {};
-			arguments.stSwagger.definitions["ContentType"] = {
-				"type" : "object",
-				"discriminator" : "typename",
-				"properties" : {
-					"objectid" : {
-						"type" : "string",
-						"format" : "uuid"
-					},
-					"typename" : {
-						"type" : "string",
-						"enum" : arguments.typenames
-					}
-				},
-				"required" : [
-					"objectid",
-					"typename"
-				]
-			};
 		}
 
 		if (not structKeyExists(arguments.metadata, "functions")) {
@@ -83,11 +65,13 @@ component {
 		}
 
 		for (typename in arguments.typenames) {
-			arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-			arrayAppend(arguments.stSwagger.tags, {
-				"name" = application.fapi.getContentTypeMetadata(typename=typename, md="displayname", default=typename),
-				"description" = application.fapi.getContentTypeMetadata(typename=typename, md="hint", default="")
-			});
+			if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
+				arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
+				arrayAppend(arguments.stSwagger.tags, {
+					"name" = application.fapi.getContentTypeMetadata(typename=typename, md="displayname", default=typename),
+					"description" = application.fapi.getContentTypeMetadata(typename=typename, md="hint", default="")
+				});
+			}
 		}
 
 		for (methodIn in arguments.metadata.functions) {
@@ -326,7 +310,18 @@ component {
 		if (structKeyExists(o, "getSwaggerDefinition")) {
 			return o.getSwaggerDefinition(typename=arguments.typename);
 		}
-		
+
+		if (not arguments.forUpdate) {
+			properties["objectid"] = {
+				"type" = "string",
+				"format" = "uuid"
+			};
+			properties["typename"] = {
+				"type" = "string",
+				"enum" = [arguments.typename]
+			};
+		}
+
 		for (prop in application.stCOAPI[arguments.typename].stProps) {
 			if ((arguments.forUpdate and listFindNoCase("farcry.core.packages.types.types", application.stCOAPI[arguments.typename].stProps[prop].origin)) OR (not arguments.forUpdate and prop eq "objectid")) {
 				continue;
@@ -353,7 +348,6 @@ component {
 				else {
 					properties[prop]["format"] = "date";
 				}
-				properties[prop]["allowEmptyValue"] = true;
 				break;
 			case "email":
 				properties[prop]["format"] = "email";
@@ -362,7 +356,9 @@ component {
 				properties[prop].type = "integer";
 				break;
 			case "list":
-				properties[prop].type = { "type" = "array", "items" = { "type"="string" } };
+				if (application.fapi.getPropertyMetadata(typename=arguments.typename, property=prop, md="ftSelectMultiple", default=false)) {
+					properties[prop] = { "type" = "array", "items" = { "type"="string" } };
+				}
 				break;
 			case "numeric":
 				properties[prop].type = "float";
@@ -384,24 +380,14 @@ component {
 
 		if (arguments.forUpdate) {
 			return {
-				"type" = "object",
 				"description" = "Update object for " & application.fapi.getContentTypeMetadata(typename=arguments.typename, md='displayname', default=arguments.typename),
-				"schema" = {
-					"type" = "object",
-					"properties" = properties
-				}
+				"properties" = properties
 			};
 		}
 		else {
 			return {
-				"type" = "object",
 				"description" = application.fapi.getContentTypeMetadata(typename=arguments.typename, md="hint", default=""),
-				"allOf" = [{
-					"$ref" = "##/definitions/ContentType"
-				},{
-					"type" = "object",
-					"properties" = properties
-				}]
+				"properties" = properties
 			};
 		}
 	}

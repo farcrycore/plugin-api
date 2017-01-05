@@ -672,7 +672,7 @@ component {
 		}
 
 		arrayappend(errors, err);
-		addResponse("errors", errors);
+		addResponse(res=arguments.res, key="errors", data=errors);
 	}
 
 	public numeric function errorCount(required struct req, required struct res) {
