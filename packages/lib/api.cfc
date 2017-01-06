@@ -471,11 +471,32 @@ component {
 	}
 
 	public array function addAuthentication(required struct req, required struct res) {
-		arguments.req.authentication = application.fapi.getConfig("api", "authentication");
+		var allowedAuth = listToArray(application.fapi.getConfig("api", "authentication"));
+		var thisauth = "";
+		var result = [];
 
-		if (structKeyExists(this, "addAuthentication#arguments.req.authentication#")) {
-			return invoke(this, "addAuthentication#arguments.req.authentication#", { req=arguments.req });
+		for (thisauth in allowedAuth) {
+			result = invoke(this, "addAuthentication#thisauth#", { req=arguments.req });
+
+			if (arrayLen(result)) {
+				// this auth method matched, but returned an error
+				arguments.req.authentication = thisauth;
+				return result;
+			}
+			else if (structKeyExists(arguments.req, "user")) {
+				arguments.req.authentication = thisauth;
+				return result;
+			}
 		}
+
+		arguments.req.authentication = "";
+		return [];
+	}
+
+	public array function addAuthenticationPublish(required struct req) {
+		arguments.req.user = {
+			"authentication" = "public"
+		};
 
 		return [];
 	}
@@ -534,17 +555,35 @@ component {
 		return [];
 	}
 
-	public array function addAuthorization(required struct req) {
-		// no login is required for anything
-		if (arguments.req.authentication eq "public") {
-			arguments.req.authorized = true;
-			return [];
+	public array function addAuthenticationSession(required struct req) {
+		var stKey = {};
+
+		if (application.security.isLoggedIn()) {
+			arguments.req.user = {
+				"id" = application.security.getCurrentUserID(),
+				"authentication" = "session"
+			};
 		}
 
+		return [];
+	}
+
+	public array function addAuthorization(required struct req) {
 		// no login is required for this endpoint
 		if (arguments.req.handler.permission eq "public") {
 			arguments.req.authorized = true;
 			return [];
+		}
+
+		// if no authentication matched, the default is false
+		if (arguments.req.authentication eq "") {
+			arguments.req.authorized = false;
+		}
+
+		// no login is required for anything
+		if (arguments.req.authentication eq "public") {
+			arguments.req.authorized = true;
+			return [{ "code"="105" }];
 		}
 
 		// throw error if no user was authenticated
@@ -577,7 +616,7 @@ component {
 		}
 
 		switch (arguments.req.authentication) {
-			case "basic":
+			case "public":
 				return true;
 			case "key":
 				return structKeyExists(arguments.req.user.authorization, arguments.typename) and structKeyExists(arguments.req.user.authorization[arguments.typename], arguments.permission) and arguments.req.user.authorization[arguments.typename][arguments.permission];
@@ -589,6 +628,15 @@ component {
 					case "update": return application.security.checkPermission(role=arguments.req.user.roles, permission="edit", type=arguments.typename);
 					case "delete": return application.security.checkPermission(role=arguments.req.user.roles, permission="delete", type=arguments.typename);
 					default: return application.security.checkPermission(role=arguments.req.user.roles, permission=arguments.permission, type=arguments.typename);
+				}
+			case "session":
+				switch (arguments.permission) {
+					case "list": return application.security.checkPermission(permission="view", type=arguments.typename);
+					case "get": return application.security.checkPermission(permission="view", type=arguments.typename);
+					case "create": return application.security.checkPermission(permission="create", type=arguments.typename);
+					case "update": return application.security.checkPermission(permission="edit", type=arguments.typename);
+					case "delete": return application.security.checkPermission(permission="delete", type=arguments.typename);
+					default: return application.security.checkPermission(permission=arguments.permission, type=arguments.typename);
 				}
 		}
 

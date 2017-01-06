@@ -7,6 +7,8 @@ component {
 		var handle = "";
 		var path = "";
 		var typename = "";
+		var allowedAuth = listToArray(application.fapi.getConfig("api", "authentication", "public"));
+		var thisauth = "";
 
 		if (not structKeyExists(arguments, "stSwagger")) {
 			arguments.stSwagger = deserializeJSON(fileRead(swaggerBase));
@@ -24,44 +26,57 @@ component {
 			return arguments.stSwagger;
 		}
 
-		switch (application.fapi.getConfig("api", "authentication", "public")) {
-			case "public":
-				// no security
-				break;
-			case "basic":
-				stSwagger["security"] = {
-					"basic" = []
-				};
-				stSwagger["securityDefinitions"] = {
-					"basic" = {
-						"type" = "basic"
+		for (thisauth in allowedAuth) {
+			switch (thisauth) {
+				case "public":
+					// no security
+					break;
+				case "basic":
+					if (not structKeyExists(stSwagger, "security")) {
+						stSwagger["security"] = {};
 					}
-				};
-				break;
-			case "key":
-				stSwagger["security"] = {
-					"api_key" = []
-				};
-				stSwagger["securityDefinitions"] = {
-					"api_key" = {
+					stSwagger["security"]["basic"] = [];
+
+					if (not structKeyExists(stSwagger, "securityDefinitions")) {
+						stSwagger["securityDefinitions"] = {};
+					}
+					stSwagger["securityDefinitions"]["basic"] = { "type" = "basic" };
+					break;
+				case "key":
+					if (not structKeyExists(stSwagger, "security")) {
+						stSwagger["security"] = {};
+					}
+					stSwagger["security"]["api_key"] = [];
+
+					if (not structKeyExists(stSwagger, "securityDefinitions")) {
+						stSwagger["securityDefinitions"] = {};
+					}
+					stSwagger["securityDefinitions"]["api_key"] = {
 						"type" = "apiKey",
 						"name" = "Authorization",
 						"in" = "header"
+					};
+					break;
+				case "session":
+					// no security in UI
+					break;
+				default:
+					if (not structKeyExists(stSwagger, "security")) {
+						stSwagger["security"] = {};
 					}
-				};
-				break;
-			default:
-				stSwagger["security"] = {};
-				stSwagger["security"][application.fapi.getConfig("api", "authentication", "public")] = [];
-				stSwagger["securityDefinitions"] = {
-					"api_key" = {
+					stSwagger["security"][application.fapi.getConfig("api", "authentication", "public")] = [];
+
+					if (not structKeyExists(stSwagger, "securityDefinitions")) {
+						stSwagger["securityDefinitions"] = {};
+					}
+					stSwagger["securityDefinitions"]["api_key"] = {
 						"type" = "apiKey",
 						"name" = "Authorization",
 						"in" = "header",
 						"x-custom-auth" = application.fapi.getConfig("api", "authentication", "public")
-					}
-				};
-				break;
+					};
+					break;
+			}
 		}
 
 		for (typename in arguments.typenames) {

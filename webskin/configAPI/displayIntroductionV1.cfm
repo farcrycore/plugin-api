@@ -7,13 +7,27 @@ The #application.fapi.getConfig("general", "sitetitle")# API provides access
 to data from the website.
 
 #### Authentication
+
+The following authentication methods are supported:
+
 </cfoutput>
 
-<cfswitch expression="#application.fapi.getConfig("api", "authentication")#">
-	<cfcase value="public"><cfoutput>No authentication is required.</cfoutput></cfcase>
-	<cfcase value="key"><cfoutput>All requests should include your API key in the `Authentication` header.</cfoutput></cfcase>
-	<cfcase value="basic"><cfoutput>All requests should include basic HTTP authentication, providing your FarCry credentials.</cfoutput></cfcase>
-</cfswitch>
+<cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "public")>
+	<cfoutput>- No authentication - this API is accessible to the public.
+</cfoutput>
+</cfif>
+<cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "key")>
+	<cfoutput>- API key - include the API key in the request `Authentication` header.
+</cfoutput>
+</cfif>
+<cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "basic")>
+	<cfoutput>- Basic HTTP - pass your FarCry credentials with the request in the `Authentication` header.
+</cfoutput>
+</cfif>
+<cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "session")>
+	<cfoutput>- Session - if you have logged into the webtop, the browser session will authenticate you automatically.
+</cfoutput>
+</cfif>
 
 <cfoutput>
 #### Errors

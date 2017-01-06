@@ -1,8 +1,9 @@
 component extends="farcry.core.packages.forms.forms" key="api" fuAlias="api" displayName="API" hint="Access and authentication settings" {
 
-	property name="authentication" type="string" ftDefault="public"
+	property name="authentication" type="string" ftDefault="basic,key,session"
 			 ftSeq="1" ftFieldSet="Security" ftLabel="Authentication"
-			 ftType="list" ftList="public:No authentication,basic:Basic HTTP (FarCry users),key:API Key";
+			 ftType="list" ftList="public:No authentication,basic:Basic HTTP (FarCry users),key:API Key,session:FarCry Session"
+			 ftSelectMultiple="true";
 
 	property name="contentTypes" type="longchar" ftDefault=""
 			 ftSeq="2" ftFieldSet="Security" ftLabel="Content Types"
