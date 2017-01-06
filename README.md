@@ -131,13 +131,13 @@ Parameters are defined using the arguments of the function. At the very least,
 the arguments **must** include any `handle` parameters as `path` type
 arguments.
 
-| Argument type | Notes                                                     | Attributes                                                                            |
-| ------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Path          | Must be required                                          | `in="path" description="Documentation hint" swagger_type="..." swagger_format="..."`  |
-| Query         |                                                           | `in="query" description="Documentation hint" swagger_type="..." swagger_format="..."  |
-| Header        |                                                           | `in="header" description="Documentation hint" swagger_type="..." swagger_format="..." |
-| Body          | This parameter will detect and parse JSON request bodies. | `in="body" swagger_schema="..."                                                       |
-| Form          |                                                           | `in="body" description="Documentation hint" swagger_type="..." swagger_format="..."   |
+| Argument type | Notes                                                     | Attributes                                                                             |
+| ------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Path          | Must be required                                          | `in="path" description="Documentation hint" swagger_type="..." swagger_format="..."`   |
+| Query         |                                                           | `in="query" description="Documentation hint" swagger_type="..." swagger_format="..."`  |
+| Header        |                                                           | `in="header" description="Documentation hint" swagger_type="..." swagger_format="..."` |
+| Body          | This parameter will detect and parse JSON request bodies. | `in="body" swagger_schema="..."`                                                       |
+| Form          |                                                           | `in="body" description="Documentation hint" swagger_type="..." swagger_format="..."`   |
 
 For more information about `swagger_type` and `swagger_format` see the
 [Swagger Parameter specifications](1). The body parameter `swagger_schema`
