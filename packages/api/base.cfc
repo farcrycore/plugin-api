@@ -162,7 +162,7 @@ component {
 					}
 					break;
 				case "boolean":
-					if (arguments.stObject[key]) {
+					if (len(arguments.stObject[key]) and arguments.stObject[key]) {
 						stResult[key] = true;
 					}
 					else {
