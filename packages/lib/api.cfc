@@ -548,7 +548,7 @@ component {
 			arguments.req.user = {
 				"id" = stKey.accessKeyID,
 				"authentication" = "key",
-				"authorization" = deserializeJSON(stKey.authorization)
+				"authorisation" = deserializeJSON(stKey.authorisation)
 			};
 		}
 
@@ -619,7 +619,7 @@ component {
 			case "public":
 				return true;
 			case "key":
-				return structKeyExists(arguments.req.user.authorization, arguments.typename) and structKeyExists(arguments.req.user.authorization[arguments.typename], arguments.permission) and arguments.req.user.authorization[arguments.typename][arguments.permission];
+				return structKeyExists(arguments.req.user.authorisation, arguments.typename) and structKeyExists(arguments.req.user.authorisation[arguments.typename], arguments.permission) and arguments.req.user.authorisation[arguments.typename][arguments.permission];
 			case "basic":
 				switch (arguments.permission) {
 					case "list": return application.security.checkPermission(role=arguments.req.user.roles, permission="view", type=arguments.typename);
@@ -692,7 +692,7 @@ component {
 		}
 
 		if (structKeyExists(arguments, "detail")) {
-			err["details"] = arguments.details;
+			err["detail"] = arguments.detail;
 		}
 
 		// fill out response with missing values

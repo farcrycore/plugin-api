@@ -21,8 +21,8 @@ component extends="farcry.core.packages.types.types" displayName="API Access Key
 			 ftSeq="5" ftFieldSet="Access Key" ftLabel="Key"
 			 ftHint="This value is used for key authentication. This will be set automatically on save if empty.";
 
-	property name="authorization" type="longchar" ftDefault="{}"
-			 ftSeq="6" ftFieldSet="Access Key" ftLabel="Authorization" ftOperations="list,get,create,update,delete"
+	property name="authorisation" type="longchar" ftDefault="{}"
+			 ftSeq="6" ftFieldSet="Access Key" ftLabel="authorisation" ftOperations="list,get,create,update,delete"
 			 ftHint="The operations that this key is authorized to access.";
 
 
@@ -87,7 +87,7 @@ component extends="farcry.core.packages.types.types" displayName="API Access Key
 		return result;
 	}
 
-	public string function ftEditAuthorization(required struct stObject, required struct stMetadata, required string typename, string inputClass="") {
+	public string function ftEditauthorisation(required struct stObject, required struct stMetadata, required string typename, string inputClass="") {
 		var html = "";
 		var stAuth = {};
 		var types = listToArray(application.fapi.getConfig("api", "contentTypes", ""));
