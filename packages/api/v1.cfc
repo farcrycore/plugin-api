@@ -48,7 +48,7 @@ component extends="base" {
 			q.setSQL("SELECT count(*) as record_count FROM #arguments.typename#");
 		}
 		q = q.execute().getResult();
-		addResponse("total", q.record_count);
+		addResponse("total", q.recordCount);
 	}
 
 	/** 
