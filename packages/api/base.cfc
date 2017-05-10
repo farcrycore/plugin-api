@@ -68,7 +68,7 @@ component {
 		application.fc.lib.api.clearResponse(res=request.res, res=request.res, argumentCollection=arguments);
 	}
 
-	public struct function getResponseObject(struct stObject, string typename, uuid objectid) {
+	public struct function getResponseObject(struct stObject, string typename, uuid objectid, struct swaggerDef) {
 		var o = {};
 		var stObject = {};
 		var swaggerDef = {};
@@ -76,6 +76,7 @@ component {
 		var stResult = {};
 		var typename = structKeyExists(arguments, "stObject") ? arguments.stObject.typename : arguments.typename;
 		var stItem = {};
+		var oSwagger={};
 
 		if (not structKeyExists(arguments, "stObject")) {
 			o = application.fapi.getContentType(typename=arguments.typename);
@@ -94,7 +95,13 @@ component {
 		}
 
 		// otherwise, use the swagger definition to clean up the response
-		swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename].properties;
+		if (structKeyExists(arguments,"swaggerDef")) {					
+			swaggerDef = arguments.swaggerDef
+		}
+		else {
+			swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename].properties;
+		}
+		
 		stResult = {
 			"objectid" = arguments.stObject.objectid,
 			"typename" = arguments.stObject.typename
