@@ -68,7 +68,7 @@ component {
 		application.fc.lib.api.clearResponse(res=request.res, res=request.res, argumentCollection=arguments);
 	}
 
-	public struct function getResponseObject(struct stObject, string typename, uuid objectid, struct swaggerDef) {
+	public struct function getResponseObject(struct stObject, string typename, uuid objectid, string api=request.req.handler.api,struct swaggerDef) {
 		var o = {};
 		var stObject = {};
 		var swaggerDef = {};
@@ -94,14 +94,15 @@ component {
 			arguments.stObject = o.getData(typename=arguments.typename, objectid=arguments.objectid, bArraysAsStructs=true);
 		}
 
-		// otherwise, use the swagger definition to clean up the response
-		if (structKeyExists(arguments,"swaggerDef")) {					
-			swaggerDef = arguments.swaggerDef
+		if (structKeyExists(arguments,"swaggerDef")) {
+			// Used passed in definition
+			swaggerDef = arguments.swaggerDef;
 		}
-		else {
-			swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename].properties;
+		else {	
+			// otherwise, use the swagger definition to clean up the response
+			swaggerDef = application.fc.lib.api.swagger[arguments.api].definitions[arguments.stObject.typename].properties;			
 		}
-		
+
 		stResult = {
 			"objectid" = arguments.stObject.objectid,
 			"typename" = arguments.stObject.typename
