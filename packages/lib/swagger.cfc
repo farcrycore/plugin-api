@@ -107,7 +107,7 @@ component {
 			"parameters" = []
 		};
 		var paramIn = {};
-		var attr = ""
+		var attr = "";
 		var definition = "";
 		var handle = listToArray(trim(metadata.handle), " ");
 		var typename = "";
@@ -189,7 +189,7 @@ component {
 				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
 
 				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
-					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true)
+					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
 				}
 
 				structDelete(altMethod, "x-path");
@@ -292,7 +292,7 @@ component {
 					}
 				},
 				"description" = desc
-			}
+			};
 		}
 		else if (refind("^##\w", arguments.definition)) {
 			// specific type as an item

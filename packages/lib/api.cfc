@@ -173,6 +173,7 @@ component {
 		var processor = "";
 		var error_code = "";
 		var error_codes = [];
+		var processorFunc = "";
 		
 		if (structIsEmpty(this.apis)) {
 			initializeAPIs();
@@ -185,7 +186,8 @@ component {
 			// each addXxx function checks the request to add information to the req 
 			// object if it is valid and return errors if it is not
 			for (processor in this.requestProcessors) {
-				error_codes = this[processor](req=request.req, res=request.res);
+				processorFunc = this[processor];
+				error_codes = processorFunc(req=request.req, res=request.res);
 				if (arrayLen(error_codes)) { // handles 201 and 202 error cases
 					for (error_code in error_codes) {
 						addError(req=request.req, res=request.res, argumentCollection=error_code);
@@ -196,7 +198,7 @@ component {
 			}
 
 			invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters); 
-		} catch (e) {
+		} catch (any e) {
 			application.fc.lib.error.logData(application.fc.lib.error.normalizeError(e));
 			addError(req=request.req, res=request.res, code="999", message=e.message, debug=application.fc.lib.error.normalizeError(e));
 		}
@@ -217,17 +219,16 @@ component {
 	public struct function createRequest() {
 		var requestData = getHTTPRequestData();
 		var key = "";
-		var req = {
-			"accept" = "",
-			"method" = requestData.method,
-			"url" = "",
-			"query_params" = {},
-			"query_string" = "",
-			"headers" = duplicate(requestData.headers),
-			"content_string" = requestData.content,
-			"content" = {},
-			"form" = duplicate(form)
-		}
+		var req = {};
+		req["accept"] = "";
+		req["method"] = requestData.method;
+		req["url"] = "";
+		req["query_params"] = {};
+		req["query_string"] = "";
+		req["headers"] = duplicate(requestData.headers);
+		req["content_string"] = requestData.content;
+		req["content"] = {};
+		req["form"] = duplicate(form);
 		var qs = [];
 
 		// pull out the interesting query variables
@@ -374,9 +375,10 @@ component {
 		var path_parts = listToArray(arguments.req.url, "/");
 		var errors = [];
 		var i = 0;
+		var err = {};
 
 		for (parameter in arguments.req.handler.parameters) {
-			switch (parameter.in) {
+			switch (parameter.input) {
 			case "path":
 				parameters[parameter.name] = path_parts[arguments.req.handler.parts[parameter.name]];
 				break;
@@ -385,7 +387,8 @@ component {
 					parameters[parameter.name] = arguments.req.query_params[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					err = { code="201", field=parameter.name, input=parameter.input };
+					arrayAppend(errors, err);
 				}
 				break;
 			case "header":
@@ -393,7 +396,7 @@ component {
 					parameters[parameter.name] = arguments.req.headers[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.input });
 				}
 				break;
 			case "body":
@@ -404,7 +407,7 @@ component {
 					parameters[parameter.name] = arguments.req.form[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.input });
 				}
 				break;
 			}
@@ -417,48 +420,48 @@ component {
 					}
 					for (i=1; i<=arrayLen(parameters[parameter.name]); i++) {
 						if (not isValid("uuid", parameters[parameter.name][i])) {
-							arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="value at index #i-1# must be a valid UUID" });
+							arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="value at index #i-1# must be a valid UUID" });
 						}
 					}
 					break;
 				case "boolean":
 					if (not isValid("boolean", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be boolean" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be boolean" });
 					};
 					break;
 				case "datetime":
 					if (not reFind("^\d{4}-\d{2}-\d{2}$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an RFC339 full-date string in the format YYYY-mm-dd" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an RFC339 full-date string in the format YYYY-mm-dd" });
 					}
 					break;
 				case "date":
 					if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
 					}
 					break;
 				case "email":
 					if (not isValid("email", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid email address" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid email address" });
 					}
 					break;
 				case "integer":
 					if (not reFind("^-?\d+$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an integer" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an integer" });
 					}
 					break;
 				case "numeric":
 					if (not reFind("^-?\d+(\.\d+)?$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a number" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a number" });
 					}
 					break;
 				case "url":
 					if (not isValid("url", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid URL" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid URL" });
 					}
 					break;
 				case "uuid":
 					if (not isValid("uuid", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid UUID" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid UUID" });
 					}
 					break;
 				}
@@ -649,10 +652,10 @@ component {
 
 		if (structKeyExists(arguments.res, "headers")){
 			for (key in arguments.res.headers){
-				header name="#key#" value="#arguments.res.headers[key]#";
+				cfheader(name="#key#", value="#arguments.res.headers[key]#");
 			}
 
-			header name="processing_time" value="#getTickCount() - arguments.res.start#";
+			cfheader(name="processing_time", value="#getTickCount() - arguments.res.start#");
 		}
 
 		if (arrayLen(arguments.res.errors)) {
@@ -677,7 +680,7 @@ component {
 
 
 	// construct error response
-	public void function addError(required struct req, required struct res, required string code, string message, string detail, string field, string in, any debug, boolean clearContent=true){
+	public void function addError(required struct req, required struct res, required string code, string message, string detail, string field, string input, any debug, boolean clearContent=true){
 		var err = {
 			"code" = numberformat(arguments.code, "000")
 		};

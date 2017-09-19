@@ -91,7 +91,6 @@ component extends="farcry.core.packages.types.types" displayName="API Access Key
 		var html = "";
 		var stAuth = {};
 		var types = listToArray(application.fapi.getConfig("api", "contentTypes", ""));
-		var typename = {};
 		var op = "";
 
 		if (len(arguments.stMetadata.value) and isJSON(arguments.stMetadata.value)) {
