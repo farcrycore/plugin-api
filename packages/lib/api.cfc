@@ -375,10 +375,9 @@ component {
 		var path_parts = listToArray(arguments.req.url, "/");
 		var errors = [];
 		var i = 0;
-		var err = {};
 
 		for (parameter in arguments.req.handler.parameters) {
-			switch (parameter.input) {
+			switch (parameter.in) {
 			case "path":
 				parameters[parameter.name] = path_parts[arguments.req.handler.parts[parameter.name]];
 				break;
@@ -387,8 +386,7 @@ component {
 					parameters[parameter.name] = arguments.req.query_params[parameter.name];
 				}
 				else if (parameter.required) {
-					err = { code="201", field=parameter.name, input=parameter.input };
-					arrayAppend(errors, err);
+					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.in });
 				}
 				break;
 			case "header":
@@ -396,7 +394,7 @@ component {
 					parameters[parameter.name] = arguments.req.headers[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.input });
+					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.in });
 				}
 				break;
 			case "body":
@@ -407,7 +405,7 @@ component {
 					parameters[parameter.name] = arguments.req.form[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.input });
+					arrayAppend(errors, { code="201", field=parameter.name, input=parameter.in });
 				}
 				break;
 			}
@@ -420,48 +418,48 @@ component {
 					}
 					for (i=1; i<=arrayLen(parameters[parameter.name]); i++) {
 						if (not isValid("uuid", parameters[parameter.name][i])) {
-							arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="value at index #i-1# must be a valid UUID" });
+							arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="value at index #i-1# must be a valid UUID" });
 						}
 					}
 					break;
 				case "boolean":
 					if (not isValid("boolean", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be boolean" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be boolean" });
 					};
 					break;
 				case "datetime":
 					if (not reFind("^\d{4}-\d{2}-\d{2}$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an RFC339 full-date string in the format YYYY-mm-dd" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be an RFC339 full-date string in the format YYYY-mm-dd" });
 					}
 					break;
 				case "date":
 					if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
 					}
 					break;
 				case "email":
 					if (not isValid("email", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid email address" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be a valid email address" });
 					}
 					break;
 				case "integer":
 					if (not reFind("^-?\d+$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be an integer" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be an integer" });
 					}
 					break;
 				case "numeric":
 					if (not reFind("^-?\d+(\.\d+)?$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a number" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be a number" });
 					}
 					break;
 				case "url":
 					if (not isValid("url", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid URL" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be a valid URL" });
 					}
 					break;
 				case "uuid":
 					if (not isValid("uuid", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.input, detail="must be a valid UUID" });
+						arrayAppend(errors, { code="202", field=parameter.name, input=parameter.in, detail="must be a valid UUID" });
 					}
 					break;
 				}
