@@ -130,10 +130,10 @@ component {
 
 					if (isArray(arguments.stObject[key])) {
 						for (stItem in arguments.stObject[key]) {
-							if (isStruct(stItem)) {
-								arrayAppend(stResult[key], {
-									"typename" = stItem.typename,
-									"objectid" = stItem.data
+                            if (isStruct(stItem) and structKeyExists(stItem, "typename")) {                                
+                                arrayAppend(stResult[key], {
+                                    "typename" = stItem.typename,
+                                    "objectid" = stItem.objectid
 								});
 							}
 							else if (isValid("uuid", stItem)) {
