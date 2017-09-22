@@ -10,10 +10,10 @@ component extends="base" {
 	* @permission {typename}:list
 	*/
 	function getList (
-		required string typename in="path" description="The content type" swagger_type="typename",
-		string page in="query" default=1 description="The page number" swagger_type="integer" swagger_format="int32",
-		string pagesize in="query" default=10 description="The page size. Maximum 100." swagger_type="integer" swagger_format="int32",
-		string order in="query" default="datetimeLastUpdated desc" description="The array order" swagger_type="string" enum="datetimeLastUpdated asc,datetimeLastUpdated desc"
+		required string typename location="path" description="The content type" swagger_type="typename",
+		string page location="query" default=1 description="The page number" swagger_type="integer" swagger_format="int32",
+		string pagesize location="query" default=10 description="The page size. Maximum 100." swagger_type="integer" swagger_format="int32",
+		string order location="query" default="datetimeLastUpdated desc" description="The array order" swagger_type="string" enum="datetimeLastUpdated asc,datetimeLastUpdated desc"
 	) {
 		var q = "";
 		var i = 0;
@@ -61,13 +61,13 @@ component extends="base" {
 	* @permission {typename}:get
 	*/
 	function getItem (
-		required string typename in="path" description="The content type" swagger_type="typename",
-		required string objectid in="path" description="The object id" swagger_type="string" swagger_format="uuid"
+		required string typename location="path" description="The content type" swagger_type="typename",
+		required string objectid location="path" description="The object id" swagger_type="string" swagger_format="uuid"
 	) {
 		var stObject = application.fapi.getContentObject(typename=arguments.typename, objectid=arguments.objectid);
 
 		if (structKeyExists(stObject, "bDefaultObject")) {
-			addError(code="203")
+			addError(code="203");
 			return;
 		}
 
@@ -84,8 +84,8 @@ component extends="base" {
 	* @permission {typename}:create
 	*/
 	function createItem (
-		required string typename in="path" description="The content type" swagger_type="typename",
-		required struct body in="body" description="The request body" swagger_schema="##{typename}Update"
+		required string typename location="path" description="The content type" swagger_type="typename",
+		required struct body location="body" description="The request body" swagger_schema="##{typename}Update"
 	) {
 		var stObject = application.fapi.getContentObject(typename=arguments.typename, objectid=application.fapi.getUUID());
 		var o = application.fapi.getContentType(arguments.typename);
@@ -109,9 +109,9 @@ component extends="base" {
 	* @permission {typename}:update
 	*/
 	function updateItem (
-		required string typename in="path" description="The content type" swagger_type="typename",
-		required string objectid in="path" description="The object id" swagger_type="string" swagger_format="uuid",
-		required struct body in="body" description="The request body" swagger_schema="##{typename}Update"
+		required string typename location="path" description="The content type" swagger_type="typename",
+		required string objectid location="path" description="The object id" swagger_type="string" swagger_format="uuid",
+		required struct body location="body" description="The request body" swagger_schema="##{typename}Update"
 	) {
 		var o = application.fapi.getContentType(arguments.typename);
 		var stObject = o.getData(objectid=arguments.objectid);
@@ -135,14 +135,14 @@ component extends="base" {
 	* @permission {typename}:delete
 	*/
 	function deleteItem (
-		required string typename in="path" description="The content type" swagger_type="typename",
-		required string objectid in="path" description="The object id" swagger_type="string" swagger_format="uuid"
+		required string typename location="path" description="The content type" swagger_type="typename",
+		required string objectid location="path" description="The object id" swagger_type="string" swagger_format="uuid"
 	) {
 		var stObject = application.fapi.getContentObject(typename=arguments.typename, objectid=arguments.objectid);
 		var stResult = {};
 
 		if (structKeyExists(stObject, "bDefaultObject")) {
-			addError(code="203")
+			addError(code="203");
 			return;
 		}
 

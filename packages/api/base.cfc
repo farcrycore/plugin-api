@@ -70,13 +70,13 @@ component {
 
 	public struct function getResponseObject(struct stObject, string typename, uuid objectid) {
 		var o = {};
-		var stObject = {};
 		var swaggerDef = {};
 		var key = "";
 		var stResult = {};
-		var typename = structKeyExists(arguments, "stObject") ? arguments.stObject.typename : arguments.typename;
 		var stItem = {};
 
+		arguments.typename = structKeyExists(arguments, "stObject") ? arguments.stObject.typename : arguments.typename;
+		
 		if (not structKeyExists(arguments, "stObject")) {
 			o = application.fapi.getContentType(typename=arguments.typename);
 		}
