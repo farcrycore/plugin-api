@@ -225,6 +225,11 @@ component {
 	}
 
 	public struct function getSwaggerParameter(required struct metadata) {
+		/* In cf10 location will be used instead of in */
+		if (NOT structKeyExists(arguments.metadata, "in") AND structKeyExists(arguments.metadata, "location")) {
+			arguments.metadata["in"] = arguments.metadata.location;
+		}
+
 		var paramOut = {
 			"in" = structKeyExists(arguments.metadata, "in") ? arguments.metadata.in : "query",
 			"name" = arguments.metadata.name,
@@ -349,6 +354,10 @@ component {
 
 			switch (application.fapi.getPropertyMetadata(typename=arguments.typename, property=prop, md="ftType", default=application.stCOAPI[arguments.typename].stProps[prop].metadata.type)) {
 			case "array":
+				properties[prop].type = "array";
+				properties[prop]["items"] = { "$ref" = "##/definitions/ItemReference" };
+				break;
+			case "typeahead":
 				properties[prop].type = "array";
 				properties[prop]["items"] = { "$ref" = "##/definitions/ItemReference" };
 				break;
