@@ -195,7 +195,12 @@ component {
 				}
 			}
 
-			invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters); 
+			if (request.req.method neq "OPTIONS") {
+				invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters); 
+			}
+			else {
+				structDelete(request.res, "content");
+			}
 		} catch (e) {
 			application.fc.lib.error.logData(application.fc.lib.error.normalizeError(e));
 			addError(req=request.req, res=request.res, code="999", message=e.message, debug=application.fc.lib.error.normalizeError(e));
@@ -268,16 +273,19 @@ component {
 
 		if (arrayLen(this.originWhitelist) and this.originWhitelist[1] eq "*" and structKeyExists(arguments.req.headers, "Origin")) {
 			arguments.res.headers["Access-Control-Allow-Origin"] = arguments.req.headers.Origin;
+			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
 			return [];
 		}
 		else if (arrayLen(this.originWhitelist) and this.originWhitelist[1] eq "*") {
 			arguments.res.headers["Access-Control-Allow-Origin"] = "*";
+			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
 			return [];
 		}
 		else if (structKeyExists(arguments.req.headers, "Origin")) {
 			for (regex in this.originWhitelistRegex) {
 				if (regex.matcher(arguments.req.headers.Origin).matches()) {
 					arguments.res.headers["Access-Control-Allow-Origin"] = arguments.req.headers.Origin;
+					arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
 					return [];
 				}
 			}
@@ -293,6 +301,9 @@ component {
 		for (handler in this.handlers) {
 			if (handler.java_regex.matcher( javaCast( "string", arguments.req.url ) ).matches()) {
 				if (handler.method eq arguments.req.method) {
+					arguments.req.handler = handler;
+				}
+				else if (structKeyExists(arguments.req.headers, "Access-Control-Request-Method") and handler.method eq arguments.req.headers["Access-Control-Request-Method"]) {
 					arguments.req.handler = handler;
 				}
 				arrayAppend(allowed_methods, ucase(handler.method));
@@ -314,9 +325,9 @@ component {
 	}
 
 	public array function addResponseType(required struct req, required struct res) {
-		if (structkeyexists(arguments.req.headers, "accept")){
-			for (i=1; i<=listlen(arguments.req.headers.accept, ";"); i++){
-				switch (listgetat(arguments.req.headers.accept, i, ";")){
+		if (structkeyexists(arguments.req.headers, "accept") and arguments.req.headers.accept neq "*/*"){
+			for (i=1; i<=listlen(arguments.req.headers.accept, ","); i++){
+				switch (listFirst(listgetat(arguments.req.headers.accept, i, ","), ";")) {
 					case "text/html":
 						arguments.res["type"] = "html";
 						break;
@@ -326,7 +337,7 @@ component {
 				}
 			}
 			if (not structkeyexists(arguments.res, "type")){
-				return [{"code"="003"}];
+				return [{"code"="003","detail"=arguments.req.headers.accept}];
 			}
 			else {
 				return [];
@@ -403,7 +414,7 @@ component {
 				if (structKeyExists(arguments.req.form, parameter.name)) {
 					parameters[parameter.name] = arguments.req.form[parameter.name];
 				}
-				else if (parameter.required) {
+				else if (arguments.req.method neq "OPTIONS" and parameter.required) {
 					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
 				}
 				break;
@@ -672,7 +683,13 @@ component {
 			}
 		}
 
-		application.fapi.stream(argumentCollection=res);
+		if (structKeyExists(res, "content")) {
+			application.fapi.stream(argumentCollection=res);
+		}
+		else {
+			cfcontent(reset=true);
+			abort;
+		}
 	}
 
 
@@ -693,6 +710,12 @@ component {
 
 		if (structKeyExists(arguments, "detail")) {
 			err["detail"] = arguments.detail;
+		}
+		if (structKeyExists(arguments, "field")) {
+			err["field"] = arguments.field;
+		}
+		if (structKeyExists(arguments, "in")) {
+			err["in"] = arguments.in;
 		}
 
 		// fill out response with missing values

@@ -1,7 +1,6 @@
 component {
 
 	public struct function getSwaggerAPI(required struct metadata, required string prefix, required array typenames, struct stSwagger) {
-		var swaggerBase = structKeyExists(application, "swaggerBase") ? application.swaggerBase : "/farcry/plugins/api/config/swagger.json";
 		var methodIn = {};
 		var method = "";
 		var handle = "";
@@ -9,9 +8,11 @@ component {
 		var typename = "";
 		var allowedAuth = listToArray(application.fapi.getConfig("api", "authentication", "public"));
 		var thisauth = "";
+		var i = 0;
+		var tags = "";
 
 		if (not structKeyExists(arguments, "stSwagger")) {
-			arguments.stSwagger = deserializeJSON(fileRead(swaggerBase));
+			arguments.stSwagger = structKeyExists(application, "swaggerBase") ? application.swaggerBase : deserializeJSON(fileRead("/farcry/plugins/api/config/swagger.json"));
 			arguments.stSwagger.info.version = listLast(arguments.metadata.fullname, ".");
 			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
 			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#", alternateHTML="");
@@ -32,22 +33,12 @@ component {
 					// no security
 					break;
 				case "basic":
-					if (not structKeyExists(stSwagger, "security")) {
-						stSwagger["security"] = {};
-					}
-					stSwagger["security"]["basic"] = [];
-
 					if (not structKeyExists(stSwagger, "securityDefinitions")) {
 						stSwagger["securityDefinitions"] = {};
 					}
 					stSwagger["securityDefinitions"]["basic"] = { "type" = "basic" };
 					break;
 				case "key":
-					if (not structKeyExists(stSwagger, "security")) {
-						stSwagger["security"] = {};
-					}
-					stSwagger["security"]["api_key"] = [];
-
 					if (not structKeyExists(stSwagger, "securityDefinitions")) {
 						stSwagger["securityDefinitions"] = {};
 					}
@@ -61,11 +52,6 @@ component {
 					// no security in UI
 					break;
 				default:
-					if (not structKeyExists(stSwagger, "security")) {
-						stSwagger["security"] = {};
-					}
-					stSwagger["security"][application.fapi.getConfig("api", "authentication", "public")] = [];
-
 					if (not structKeyExists(stSwagger, "securityDefinitions")) {
 						stSwagger["securityDefinitions"] = {};
 					}
@@ -82,10 +68,6 @@ component {
 		for (typename in arguments.typenames) {
 			if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
 				arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-				arrayAppend(arguments.stSwagger.tags, {
-					"name" = application.fapi.getContentTypeMetadata(typename=typename, md="displayname", default=typename),
-					"description" = application.fapi.getContentTypeMetadata(typename=typename, md="hint", default="")
-				});
 			}
 		}
 
@@ -99,6 +81,15 @@ component {
 			getSwaggerAPI(metadata=arguments.metadata.extends, argumentCollection=arguments);
 		}
 
+		for (i=arrayLen(arguments.stSwagger.tags); i>0; i--) {
+			if (listFindNoCase(tags, arguments.stSwagger.tags[i].name)) {
+				arrayDeleteAt(arguments.stSwagger.tags, i);
+			}
+			else {
+				tags = listAppend(tags, arguments.stSwagger.tags[i].name);
+			}
+		}
+
 		return arguments.stSwagger;
 	}
 
@@ -109,7 +100,7 @@ component {
 		var paramIn = {};
 		var attr = ""
 		var definition = "";
-		var handle = listToArray(trim(metadata.handle), " ");
+		var handle = listToArray(trim(arguments.metadata.handle), " ");
 		var typename = "";
 		var altMethod = {};
 		var expandTypename = 0;
@@ -123,6 +114,12 @@ component {
 		}
 		methodOut["x-method"] = lcase(handle[1]);
 		methodOut["x-path"] = handle[2];
+		if (structKeyExists(arguments.metadata, "operationID")) {
+			methodOut["operationId"] = arguments.metadata.operationID;
+		}
+		else {
+			methodOut["operationId"] = arguments.metadata.name;
+		}
 
 		if (structKeyExists(arguments.metadata, "displayname")) {
 			methodOut["summary"] = arguments.metadata.displayname;
@@ -177,9 +174,16 @@ component {
 
 				for (paramIn in altMethod.parameters) {
 					if (structKeyExists(paramIn, "schema")) {
-						paramIn.schema = subsituteTypeParameters(typename=typename, input=paramIn.schema);
-						paramIn.schema = getSwaggerResponse(paramIn.schema);
+						paramIn["schema"] = subsituteTypeParameters(typename=typename, input=paramIn.schema);
+						structAppend(paramIn, getSwaggerResponse(paramIn.schema), true);
+						structDelete(paramIn, "type");
 					}
+				}
+
+				for (attr in altMethod.tags) {
+					arrayAppend(arguments.swagger.tags, {
+						"name" = attr
+					});
 				}
 
 				if (not structKeyExists(arguments.swagger.paths, altMethod["x-path"])) {
@@ -201,9 +205,16 @@ component {
 				methodOut.responses[attr] = getSwaggerResponse(methodOut.responses[attr]);
 			}
 
+			for (attr in methodOut.tags) {
+				arrayAppend(arguments.swagger.tags, {
+					"name" = attr
+				});
+			}
+
 			for (paramIn in methodOut.parameters) {
 				if (structKeyExists(paramIn, "schema")) {
-					paramIn.schema = getSwaggerResponse(paramIn.schema);
+					structAppend(paramIn, getSwaggerResponse(paramIn.schema), true);
+					structDelete(paramIn, "type");
 				}
 			}
 
@@ -299,6 +310,34 @@ component {
 			return {
 				"schema" = {
 					"$ref": "##/definitions/" & mid(def, 2, len(def))
+				},
+				"description" = desc
+			};
+		}
+		else if (refind("^\[\]##", arguments.definition)) {
+			// specific type as an array
+			return {
+				"schema" = {
+					"properties" = {
+						"items" = {
+							"type" = "array",
+							"items" = {
+								"$ref": def
+							}
+						},
+						"page" = {
+							"type" = "integer",
+							"format" = "int32"
+						},
+						"pagesize" = {
+							"type" = "integer",
+							"format" = "int32"
+						},
+						"total" = {
+							"type" = "integer",
+							"format" = "int32"
+						}
+					}
 				},
 				"description" = desc
 			};
