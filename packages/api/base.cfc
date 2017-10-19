@@ -1,7 +1,7 @@
 component {
 
 	/**
-	* @handle GET 
+	* @handle GET
 	* @tags General
 	* @security none
 	* @200 #/definitions/Status:API Status
@@ -56,7 +56,7 @@ component {
 		return application.fc.lib.api.errorCount(req=request.req, res=request.res);
 	}
 
-	public void function setResponse(required struct data) {
+	public void function setResponse(required any data) {
 		application.fc.lib.api.setResponse(res=request.res, res=request.res, argumentCollection=arguments);
 	}
 
@@ -70,17 +70,16 @@ component {
 
 	public struct function getResponseObject(struct stObject, string typename, uuid objectid) {
 		var o = {};
-		var stObject = {};
 		var swaggerDef = {};
 		var key = "";
 		var stResult = {};
-		var typename = structKeyExists(arguments, "stObject") ? arguments.stObject.typename : arguments.typename;
 		var stItem = {};
 
 		if (not structKeyExists(arguments, "stObject")) {
 			o = application.fapi.getContentType(typename=arguments.typename);
 		}
 		else {
+			arguments.typename = arguments.stObject.typename;
 			o = application.fapi.getContentType(typename=arguments.stObject.typename);
 		}
 

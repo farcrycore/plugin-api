@@ -1,6 +1,6 @@
 component {
 
-	public struct function getSwaggerAPI(required struct metadata, required string prefix, required array typenames, struct stSwagger) {
+	public struct function getSwaggerAPI(required struct metadata, required string prefix, required array typenames, struct stSwagger={}) {
 		var methodIn = {};
 		var method = "";
 		var handle = "";
@@ -11,8 +11,8 @@ component {
 		var i = 0;
 		var tags = "";
 
-		if (not structKeyExists(arguments, "stSwagger")) {
-			arguments.stSwagger = structKeyExists(application, "swaggerBase") ? application.swaggerBase : deserializeJSON(fileRead("/farcry/plugins/api/config/swagger.json"));
+		if (structIsEmpty(arguments.stSwagger)) {
+			arguments.stSwagger = structKeyExists(application, "swaggerBase") ? application.swaggerBase : deserializeJSON(fileRead(expandPath("/farcry/plugins") & "/api/config/swagger.json"));
 			arguments.stSwagger.info.version = listLast(arguments.metadata.fullname, ".");
 			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
 			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#", alternateHTML="");
@@ -21,64 +21,62 @@ component {
 			//arguments.stSwagger.basePath = "";
 			arguments.stSwagger.produces = ["text/json","text/html"];
 			arguments.stSwagger.paths = {};
-		}
 
-		if (not structKeyExists(arguments.metadata, "functions")) {
-			return arguments.stSwagger;
-		}
+			for (thisauth in allowedAuth) {
+				switch (thisauth) {
+					case "public":
+						// no security
+						break;
+					case "basic":
+						if (not structKeyExists(stSwagger, "securityDefinitions")) {
+							stSwagger["securityDefinitions"] = {};
+						}
+						stSwagger["securityDefinitions"]["basic"] = { "type" = "basic" };
+						break;
+					case "key":
+						if (not structKeyExists(stSwagger, "securityDefinitions")) {
+							stSwagger["securityDefinitions"] = {};
+						}
+						stSwagger["securityDefinitions"]["api_key"] = {
+							"type" = "apiKey",
+							"name" = "Authorization",
+							"in" = "header"
+						};
+						break;
+					case "session":
+						// no security in UI
+						break;
+					default:
+						if (not structKeyExists(stSwagger, "securityDefinitions")) {
+							stSwagger["securityDefinitions"] = {};
+						}
+						stSwagger["securityDefinitions"]["api_key"] = {
+							"type" = "apiKey",
+							"name" = "Authorization",
+							"in" = "header",
+							"x-custom-auth" = application.fapi.getConfig("api", "authentication", "public")
+						};
+						break;
+				}
+			}
 
-		for (thisauth in allowedAuth) {
-			switch (thisauth) {
-				case "public":
-					// no security
-					break;
-				case "basic":
-					if (not structKeyExists(stSwagger, "securityDefinitions")) {
-						stSwagger["securityDefinitions"] = {};
-					}
-					stSwagger["securityDefinitions"]["basic"] = { "type" = "basic" };
-					break;
-				case "key":
-					if (not structKeyExists(stSwagger, "securityDefinitions")) {
-						stSwagger["securityDefinitions"] = {};
-					}
-					stSwagger["securityDefinitions"]["api_key"] = {
-						"type" = "apiKey",
-						"name" = "Authorization",
-						"in" = "header"
-					};
-					break;
-				case "session":
-					// no security in UI
-					break;
-				default:
-					if (not structKeyExists(stSwagger, "securityDefinitions")) {
-						stSwagger["securityDefinitions"] = {};
-					}
-					stSwagger["securityDefinitions"]["api_key"] = {
-						"type" = "apiKey",
-						"name" = "Authorization",
-						"in" = "header",
-						"x-custom-auth" = application.fapi.getConfig("api", "authentication", "public")
-					};
-					break;
+			for (typename in arguments.typenames) {
+				if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
+					arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
+				}
 			}
 		}
 
-		for (typename in arguments.typenames) {
-			if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
-				arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-			}
-		}
-
-		for (methodIn in arguments.metadata.functions) {
-			if (structKeyExists(methodIn, "handle") and (not structKeyExists(methodIn, "document") or methodIn.document eq true)) {
-				addSwaggerMethod(swagger=arguments.stSwagger, prefix=arguments.prefix, typenames=arguments.typenames, metadata=methodIn);
+		if (structKeyExists(arguments.metadata, "functions")) {
+			for (methodIn in arguments.metadata.functions) {
+				if (structKeyExists(methodIn, "handle") and (not structKeyExists(methodIn, "document") or methodIn.document eq true)) {
+					addSwaggerMethod(swagger=arguments.stSwagger, prefix=arguments.prefix, typenames=arguments.typenames, metadata=methodIn);
+				}
 			}
 		}
 
 		if (structKeyExists(arguments.metadata, "extends")) {
-			getSwaggerAPI(metadata=arguments.metadata.extends, argumentCollection=arguments);
+			getSwaggerAPI(metadata=arguments.metadata.extends, prefix=arguments.prefix, typenames=arguments.typenames, stSwagger=arguments.stSwagger, debug=1);
 		}
 
 		for (i=arrayLen(arguments.stSwagger.tags); i>0; i--) {
@@ -98,7 +96,7 @@ component {
 			"parameters" = []
 		};
 		var paramIn = {};
-		var attr = ""
+		var attr = "";
 		var definition = "";
 		var handle = listToArray(trim(arguments.metadata.handle), " ");
 		var typename = "";
@@ -193,7 +191,7 @@ component {
 				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
 
 				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
-					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true)
+					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
 				}
 
 				structDelete(altMethod, "x-path");
@@ -236,6 +234,9 @@ component {
 	}
 
 	public struct function getSwaggerParameter(required struct metadata) {
+		if (structKeyExists(arguments.metadata, "location")) {
+			arguments.metadata["in"] = arguments.metadata.location;
+		}
 		var paramOut = {
 			"in" = structKeyExists(arguments.metadata, "in") ? arguments.metadata.in : "query",
 			"name" = arguments.metadata.name,
@@ -303,7 +304,7 @@ component {
 					}
 				},
 				"description" = desc
-			}
+			};
 		}
 		else if (refind("^##\w", arguments.definition)) {
 			// specific type as an item
@@ -415,7 +416,8 @@ component {
 				}
 				break;
 			case "numeric":
-				properties[prop].type = "float";
+				properties[prop].type = "number";
+				properties[prop]["format"] = "float";
 				break;
 			case "password":
 				properties[prop].type = "password";

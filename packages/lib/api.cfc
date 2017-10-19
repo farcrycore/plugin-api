@@ -74,7 +74,7 @@ component {
 	public void function initializeAPIs(boolean bFlush=false) {
 		var stMD = {};
 		var utils = createobject("component","farcry.core.packages.farcry.utils");
-		var apis = utils.getComponents("api");
+		var apis = listToArray(utils.getComponents("api"));
 		var apiname = "";
 		var o = "";
 		var swagger = isDefined("application.fc.lib.swagger") ? application.fc.lib.swagger : createobject("component", "swagger");
@@ -182,10 +182,10 @@ component {
 		request.req = createRequest();
 
 		try {
-			// each addXxx function checks the request to add information to the req 
+			// each addXxx function checks the request to add information to the req
 			// object if it is valid and return errors if it is not
 			for (processor in this.requestProcessors) {
-				error_codes = this[processor](req=request.req, res=request.res);
+				error_codes = invoke(this, processor, {req=request.req, res=request.res});
 				if (arrayLen(error_codes)) { // handles 201 and 202 error cases
 					for (error_code in error_codes) {
 						addError(req=request.req, res=request.res, argumentCollection=error_code);
@@ -196,12 +196,12 @@ component {
 			}
 
 			if (request.req.method neq "OPTIONS") {
-				invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters); 
+				invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters);
 			}
 			else {
 				structDelete(request.res, "content");
 			}
-		} catch (e) {
+		} catch (any e) {
 			application.fc.lib.error.logData(application.fc.lib.error.normalizeError(e));
 			addError(req=request.req, res=request.res, code="999", message=e.message, debug=application.fc.lib.error.normalizeError(e));
 		}
@@ -232,7 +232,7 @@ component {
 			"content_string" = requestData.content,
 			"content" = {},
 			"form" = duplicate(form)
-		}
+		};
 		var qs = [];
 
 		// pull out the interesting query variables
@@ -396,7 +396,7 @@ component {
 					parameters[parameter.name] = arguments.req.query_params[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					arrayAppend(errors, { "code"="201", "field"=parameter.name, "inp"=parameter["in"] });
 				}
 				break;
 			case "header":
@@ -404,7 +404,7 @@ component {
 					parameters[parameter.name] = arguments.req.headers[parameter.name];
 				}
 				else if (parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					arrayAppend(errors, { code="201", "field"=parameter.name, "inp"=parameter["in"] });
 				}
 				break;
 			case "body":
@@ -415,7 +415,7 @@ component {
 					parameters[parameter.name] = arguments.req.form[parameter.name];
 				}
 				else if (arguments.req.method neq "OPTIONS" and parameter.required) {
-					arrayAppend(errors, { code="201", field=parameter.name, in=parameter.in });
+					arrayAppend(errors, { "code"="201", "field"=parameter.name, "inp"=parameter["in"] });
 				}
 				break;
 			}
@@ -428,48 +428,48 @@ component {
 					}
 					for (i=1; i<=arrayLen(parameters[parameter.name]); i++) {
 						if (not isValid("uuid", parameters[parameter.name][i])) {
-							arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="value at index #i-1# must be a valid UUID" });
+							arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="value at index #i-1# must be a valid UUID" });
 						}
 					}
 					break;
 				case "boolean":
 					if (not isValid("boolean", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be boolean" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be boolean" });
 					};
 					break;
 				case "datetime":
 					if (not reFind("^\d{4}-\d{2}-\d{2}$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an RFC339 full-date string in the format YYYY-mm-dd" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be an RFC339 full-date string in the format YYYY-mm-dd" });
 					}
 					break;
 				case "date":
 					if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be an RFC339 date-time string date in the format YYYY-mm-ddTHH:mm:ssZ" });
 					}
 					break;
 				case "email":
 					if (not isValid("email", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid email address" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be a valid email address" });
 					}
 					break;
 				case "integer":
 					if (not reFind("^-?\d+$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be an integer" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be an integer" });
 					}
 					break;
 				case "numeric":
 					if (not reFind("^-?\d+(\.\d+)?$", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a number" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be a number" });
 					}
 					break;
 				case "url":
 					if (not isValid("url", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid URL" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be a valid URL" });
 					}
 					break;
 				case "uuid":
 					if (not isValid("uuid", parameters[parameter.name])) {
-						arrayAppend(errors, { code="202", field=parameter.name, in=parameter.in, detail="must be a valid UUID" });
+						arrayAppend(errors, { "code"="202", "field"=parameter.name, "inp"=parameter["in"], "detail"="must be a valid UUID" });
 					}
 					break;
 				}
@@ -630,7 +630,9 @@ component {
 			case "public":
 				return true;
 			case "key":
-				return structKeyExists(arguments.req.user.authorisation, arguments.typename) and structKeyExists(arguments.req.user.authorisation[arguments.typename], arguments.permission) and arguments.req.user.authorisation[arguments.typename][arguments.permission];
+				return structKeyExists(arguments.req.user.authorisation, arguments.typename)
+					and structKeyExists(arguments.req.user.authorisation[arguments.typename], arguments.permission)
+					and arguments.req.user.authorisation[arguments.typename][arguments.permission];
 			case "basic":
 				switch (arguments.permission) {
 					case "list": return application.security.checkPermission(role=arguments.req.user.roles, permission="view", type=arguments.typename);
@@ -660,16 +662,16 @@ component {
 
 		if (structKeyExists(arguments.res, "headers")){
 			for (key in arguments.res.headers){
-				header name="#key#" value="#arguments.res.headers[key]#";
+				cfheader(name="#key#", value=arguments.res.headers[key]);
 			}
 
-			header name="processing_time" value="#getTickCount() - arguments.res.start#";
+			cfheader(name="processing_time", value=getTickCount() - arguments.res.start);
 		}
 
 		if (arrayLen(arguments.res.errors)) {
 			arguments.res.content["errors"] = arguments.res.errors;
 		}
-		else if (not structkeyexists(arguments.res, "content") or structIsEmpty(arguments.res.content)) {
+		else if (not structkeyexists(arguments.res, "content") or (isStruct(arguments.res.content) and structIsEmpty(arguments.res.content))) {
 			arguments.res["content"] = "";
 		}
 
@@ -679,11 +681,11 @@ component {
 
 		if (arguments.res.type eq "html" and not isSimpleValue(arguments.res.content)){
 			savecontent variable="arguments.res.content" {
-				dump(arguments.res.content);
+				cfdump(var=arguments.res.content);
 			}
 		}
 
-		if (structKeyExists(res, "content")) {
+		if (structKeyExists(arguments.res, "content")) {
 			application.fapi.stream(argumentCollection=res);
 		}
 		else {
@@ -694,7 +696,7 @@ component {
 
 
 	// construct error response
-	public void function addError(required struct req, required struct res, required string code, string message, string detail, string field, string in, any debug, boolean clearContent=true){
+	public void function addError(required struct req, required struct res, required string code, string message, string detail, string field, string inp, any debug, boolean clearContent=true){
 		var err = {
 			"code" = numberformat(arguments.code, "000")
 		};
@@ -714,8 +716,8 @@ component {
 		if (structKeyExists(arguments, "field")) {
 			err["field"] = arguments.field;
 		}
-		if (structKeyExists(arguments, "in")) {
-			err["in"] = arguments.in;
+		if (structKeyExists(arguments, "inp")) {
+			err["in"] = arguments.inp;
 		}
 
 		// fill out response with missing values
@@ -755,7 +757,7 @@ component {
 		}
 	}
 
-	public void function setResponse(required struct res, required struct data) {
+	public void function setResponse(required struct res, required any data) {
 		arguments.res.content = duplicate(arguments.data);
 	}
 
