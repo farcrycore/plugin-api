@@ -131,6 +131,11 @@ component {
 			methodOut["tags"] = listToArray(arguments.metadata.tags);
 		}
 
+		if (structKeyExists(arguments.metadata, "security") and arguments.metadata.security neq "none") {
+			methodOut["security"] = {};
+			methodOut["security"][arguments.metadata.security] = [];
+		}
+
 		if (structKeyExists(arguments.metadata, "permission")) {
 			methodOut["x-permission"] = arguments.metadata.permission;
 		}

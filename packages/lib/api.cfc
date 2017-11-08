@@ -273,19 +273,19 @@ component {
 
 		if (arrayLen(this.originWhitelist) and this.originWhitelist[1] eq "*" and structKeyExists(arguments.req.headers, "Origin")) {
 			arguments.res.headers["Access-Control-Allow-Origin"] = arguments.req.headers.Origin;
-			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
+			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type,authorization";
 			return [];
 		}
 		else if (arrayLen(this.originWhitelist) and this.originWhitelist[1] eq "*") {
 			arguments.res.headers["Access-Control-Allow-Origin"] = "*";
-			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
+			arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type,authorization";
 			return [];
 		}
 		else if (structKeyExists(arguments.req.headers, "Origin")) {
 			for (regex in this.originWhitelistRegex) {
 				if (regex.matcher(arguments.req.headers.Origin).matches()) {
 					arguments.res.headers["Access-Control-Allow-Origin"] = arguments.req.headers.Origin;
-					arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type";
+					arguments.res.headers["Access-Control-Allow-Headers"] = "cache-control,content-type,authorization";
 					return [];
 				}
 			}
@@ -486,6 +486,11 @@ component {
 		var thisauth = "";
 		var result = [];
 
+		if (arguments.req.method eq "OPTIONS") {
+			arguments.req.authentication = "";
+			return [];
+		}
+
 		for (thisauth in allowedAuth) {
 			result = invoke(this, "addAuthentication#thisauth#", { req=arguments.req });
 
@@ -580,6 +585,12 @@ component {
 	}
 
 	public array function addAuthorization(required struct req) {
+		// ignore authentication for OPTIONS requests
+		if (arguments.req.method eq "OPTIONS") {
+			arguments.req.authorized = true;
+			return [];
+		}
+
 		// no login is required for this endpoint
 		if (arguments.req.handler.permission eq "public") {
 			arguments.req.authorized = true;
@@ -589,12 +600,13 @@ component {
 		// if no authentication matched, the default is false
 		if (arguments.req.authentication eq "") {
 			arguments.req.authorized = false;
+			return [{ "code"="101" }];
 		}
 
 		// no login is required for anything
 		if (arguments.req.authentication eq "public") {
 			arguments.req.authorized = true;
-			return [{ "code"="105" }];
+			return [];
 		}
 
 		// throw error if no user was authenticated
@@ -602,8 +614,14 @@ component {
 			return [{ "code"="105", "message"="Anonymous users are not authenticated for this request" }];
 		}
 
+		// any authentication access is allowed
+		if (arguments.req.handler.permission eq "authenticated") {
+			arguments.req.authorized = true;
+			return [];
+		}
+
 		// permission is based on a parameter in the endpoint
-		if (left(arguments.req.handler.permission, 10) eq "{typename}") {
+		else if (left(arguments.req.handler.permission, 10) eq "{typename}") {
 			arguments.req.authorized = checkPermission(req=arguments.req, permission=listLast(arguments.req.handler.permission, ":"), typename=arguments.req.parameters.typename);
 		}
 		else if (find(":", arguments.req.handler.permission)) {
@@ -786,6 +804,38 @@ component {
 		}
 
 		return q;
+	}
+
+	public function dateToRFC(required any input, boolean includeTime=true) {
+		var utcDate = "";
+
+		if (not isDate(arguments.input)) {
+			return "";
+		}
+
+		utcDate = DateConvert("Local2UTC", arguments.input);
+
+		if (arguments.includeTime) {
+			return dateFormat(utcDate, "YYYY-mm-dd") & "T" & timeFormat(utcDate, "HH:mm:ss") & "Z";
+		}
+		else {
+			return dateFormat(utcDate, "YYYY-mm-dd");
+		}
+	}
+
+	public function rfcToDate(required any input, boolean includeTime=true) {
+		var sdf = "";
+		var pos = "";
+		
+		if (arguments.includeTime) {
+			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-ddTHH:mm:ssZ");
+		}
+		else {
+			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd");
+		}
+		pos = CreateObject("java", "java.text.ParsePosition").init(0);
+		
+		return sdf.parse(arguments.input, pos);
 	}
 
 }
