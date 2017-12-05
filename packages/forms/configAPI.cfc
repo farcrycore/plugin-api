@@ -8,7 +8,9 @@ component extends="farcry.core.packages.forms.forms" key="api" fuAlias="api" dis
 	property name="contentTypes" type="longchar" ftDefault=""
 			 ftSeq="2" ftFieldSet="Security" ftLabel="Content Types"
 			 ftType="list" ftListData="getTypes" ftSelectMultiple="true";
-
+property name="schemes" type="string" ftDefault="http"
+			 ftSeq="10" ftFieldSet="URL" ftLabel="Scheme"
+			 ftType="list" ftList="http,https" ;
 
 	public query function getTypes() {
 		var qTypes = querynew("value,name");
