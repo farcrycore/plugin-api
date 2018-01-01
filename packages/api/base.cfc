@@ -290,11 +290,11 @@ component {
 		}
 	}
 
-	private function dateToRFC(required any input, boolean includeTime=true) {
+	private string function dateToRFC(required any input, boolean includeTime=true) {
 		return application.fc.lib.api.dateToRFC(argumentCollection=arguments);
 	}
 
-	private function rfcToDate(required any input, boolean includeTime=true) {
+	private date function rfcToDate(required any input, boolean includeTime=true) {
 		return application.fc.lib.api.rfcToDate(argumentCollection=arguments);
 	}
 

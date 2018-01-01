@@ -806,7 +806,7 @@ component {
 		return q;
 	}
 
-	public function dateToRFC(required any input, boolean includeTime=true) {
+	public string function dateToRFC(required any input, boolean includeTime=true) {
 		var utcDate = "";
 
 		if (not isDate(arguments.input)) {
@@ -823,19 +823,34 @@ component {
 		}
 	}
 
-	public function rfcToDate(required any input, boolean includeTime=true) {
+	public date function rfcToDate(required any input, boolean includeTime=true) {
 		var sdf = "";
 		var pos = "";
-		
+
 		if (arguments.includeTime) {
-			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-ddTHH:mm:ssZ");
+			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		}
 		else {
 			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd");
 		}
 		pos = CreateObject("java", "java.text.ParsePosition").init(0);
-		
+
 		return sdf.parse(arguments.input, pos);
+	}
+
+	public string function validateDate(required any input, boolean includeTime=true) {
+		if (arguments.includeTime) {
+			if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", arguments.input)) {
+				return "Date/times must be in the form yyyy-MM-ddTHH:mm:ssZ";
+			}
+		}
+		else {
+			if (not reFind("^\d{4}-\d{2}-\d{2}$", arguments.input)) {
+				return "Dates must be in the form yyyy-MM-dd";
+			}
+		}
+
+		return "";
 	}
 
 }
