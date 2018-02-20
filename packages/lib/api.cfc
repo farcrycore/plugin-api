@@ -699,7 +699,7 @@ component {
 
 		if (arguments.res.type eq "html" and not isSimpleValue(arguments.res.content)){
 			savecontent variable="arguments.res.content" {
-				cfdump(var=arguments.res.content);
+				dump(var=arguments.res.content);
 			}
 		}
 
