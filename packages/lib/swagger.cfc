@@ -291,7 +291,7 @@ component {
 						"items" = {
 							"type" = "array",
 							"items" = {
-								"$ref" = "##/definitions/" & mid(def, "4", len(def))
+								"$ref" = "##/definitions/" & mid(def, 4, len(def))
 							}
 						},
 						"page" = {
@@ -328,7 +328,7 @@ component {
 						"items" = {
 							"type" = "array",
 							"items" = {
-								"$ref": def
+								"$ref": mid(def, 3, len(def))
 							}
 						},
 						"page" = {
