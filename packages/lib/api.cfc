@@ -312,6 +312,7 @@ component {
 
 		if (structKeyExists(arguments.req, "handler")) {
 			arguments.res.headers["Allow"] = arrayToList(allowed_methods, ", ");
+			arguments.res.headers["Access-Control-Allow-Methods"] = arrayToList(allowed_methods, ", ");
 			return [];
 		}
 		else if (arrayLen(allowed_methods)) {
