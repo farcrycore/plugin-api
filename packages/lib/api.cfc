@@ -51,7 +51,7 @@ component {
 		"html" = ["text/html"],
 		"json" = ["text/json","application/json"]
 	};
-	this.requestProcessors = ["addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization"];
+	this.requestProcessors = ["addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters"];
 
 	this.originWhitelist = ["*"];
 	this.originWhitelistRegex = [];
@@ -84,7 +84,6 @@ component {
 		}
 
 		this.oAccessKey = application.fapi.getContentType(typename="apiAccessKey");
-		
 
 		for (apiname in apis){
 			if (apiname neq "base") {
@@ -141,12 +140,18 @@ component {
 					"parameters" = [],
 					"path" = path,
 					"permission" = structKeyExists(func, "permission") ? func.permission : "public",
-					"attrs" = duplicate(func)
+					"attrs" = duplicate(func),
+					"preprocessing" = []
 				};
 
 				if (structKeyExists(func, "parameters") and arrayLen(func.parameters)) {
 					for (i in func.parameters) {
-						arrayAppend(stHandler.parameters, application.fc.lib.swagger.getSwaggerParameter(i));
+						if (structKeyExists(i, "in") and i.in eq "pre") {
+							arrayAppend(stHandler.preprocessing, getPreprocessingParameter(i));
+						}
+						else {
+							arrayAppend(stHandler.parameters, application.fc.lib.swagger.getSwaggerParameter(i));
+						}
 					}
 				}
 
@@ -166,6 +171,27 @@ component {
 		if (structKeyExists(arguments.metadata, "extends")) {
 			addHandlers(metadata=arguments.metadata.extends, argumentCollection=arguments);
 		}
+	}
+
+	public struct function getPreprocessingParameter(required struct metadata) {
+		var paramOut = {
+			"name" = arguments.metadata.name,
+			"description" = structKeyExists(arguments.metadata, "description") ? arguments.metadata.description : "",
+			"method" = listFirst(arguments.metadata.fn, "("),
+			"args" = {}
+		};
+
+		if (refind("\([^\)]", arguments.metadata.fn)) {
+			// parse out args
+			var theseargs = mid(arguments.metadata.fn, find("(",arguments.metadata.fn)+1, find(")",arguments.metadata.fn)-find("(",arguments.metadata.fn)-1);
+			var arg = "";
+
+			for (arg in listToArray(theseargs)) {
+				paramOut.args[trim(listFirst(arg, "="))] = listRest(arg, "=");
+			}
+		}
+
+		return paramOut;
 	}
 
 	// parse every request into a self contained data packet
@@ -190,6 +216,8 @@ component {
 					for (error_code in error_codes) {
 						addError(req=request.req, res=request.res, argumentCollection=error_code);
 					}
+				}
+				if (errorCount(request.req, request.res)) {
 					sendResponse(res=request.res);
 					return;
 				}
@@ -634,6 +662,28 @@ component {
 
 		if (not arguments.req.authorized) {
 			return [{ "code"="105" }];
+		}
+
+		return [];
+	}
+
+	public array function addPreprocessedParameters(required struct req, required struct res) {
+		if (arrayLen(arguments.req.handler.preprocessing) eq 0 or arguments.req.method eq "OPTIONS") {
+			return [];
+		}
+
+		var preprocesser = {};
+		var stArgs = {};
+
+		for (preprocessor in arguments.req.handler.preprocessing) {
+			stArgs = duplicate(preprocessor.args);
+			structAppend(stArgs, arguments);
+			structAppend(stArgs, arguments.req.parameters);
+			arguments.req.parameters[preprocessor.name] = invoke(this.apis[arguments.req.handler.api], preprocessor.method, stArgs);
+
+			if (errorCount(arguments.req, arguments.res)) {
+				return [];
+			}
 		}
 
 		return [];

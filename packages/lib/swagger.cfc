@@ -148,6 +148,9 @@ component {
 				if (structKeyExists(paramIn, "swagger_type") and paramIn.swagger_type eq "typename") {
 					expandTypename = arrayLen(methodOut.parameters) + 1;
 				}
+				else if (structKeyExists(paramIn, "in") and paramIn.in eq "pre") {
+					// these are not public parameters
+				}
 				else {
 					arrayAppend(methodOut.parameters, getSwaggerParameter(paramIn));
 				}
