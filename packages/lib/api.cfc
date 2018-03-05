@@ -231,7 +231,7 @@ component {
 			}
 		} catch (any e) {
 			application.fc.lib.error.logData(application.fc.lib.error.normalizeError(e));
-			addError(req=request.req, res=request.res, code="999", message=e.message, debug=application.fc.lib.error.normalizeError(e));
+			addError(req=request.req, res=request.res, code="999", message=len(e.message)?e.message:e.detail, debug=application.fc.lib.error.normalizeError(e));
 		}
 
 		sendResponse(res=request.res);
