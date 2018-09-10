@@ -2,15 +2,24 @@ component extends="farcry.core.packages.forms.forms" key="api" fuAlias="api" dis
 
 	property name="authentication" type="string" ftDefault="basic,key,session"
 			 ftSeq="1" ftFieldSet="Security" ftLabel="Authentication"
-			 ftType="list" ftList="public:No authentication,basic:Basic HTTP (FarCry users),key:API Key,session:FarCry Session"
+			 ftType="list" ftList="public:No authentication,basic:Basic HTTP (FarCry users),key:API Key,statelesskey:Stateless API Key,session:FarCry Session"
 			 ftSelectMultiple="true";
 
 	property name="contentTypes" type="longchar" ftDefault=""
 			 ftSeq="2" ftFieldSet="Security" ftLabel="Content Types"
 			 ftType="list" ftListData="getTypes" ftSelectMultiple="true";
-property name="schemes" type="string" ftDefault="http"
+
+	property name="schemes" type="string" ftDefault="http"
 			 ftSeq="10" ftFieldSet="URL" ftLabel="Scheme"
 			 ftType="list" ftList="http,https" ;
+
+	property name="secret" type="string" ftDefault=""
+			 ftSeq="11" ftFieldSet="Statelss API Key" ftLabel="Secret"
+			 ftHint="This secret is used for signing stateless API keys";
+
+	property name="statelessKeyExpiry" type="integer" ftDefault="3600"
+			 ftSeq="12" ftFieldSet="Statelss API Key" ftLabel="Expiry"
+			 ftHint="How long stateless keys should be valid for";
 
 	public query function getTypes() {
 		var qTypes = querynew("value,name");

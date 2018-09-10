@@ -36,9 +36,15 @@ can be set up in the Webtop at Webtop -> Admin -> Users & Roles -> API ->
 Access Keys. Access keys allow you to specify which operations the key can
 perform with which content types.
 
-## Extending the API
+## Stateless API Key
 
-### APIs
+This scheme checks the `Authorization` header for a valid stateless API key. A stateless API key can be created by calling `application.fc.lib.api.getStatelessAPIKey(username[, expiry])`. This authentication mode requires a secret to be set in the `API` config - do not use the default secret in production deployments.
+
+This scheme is appropriate for client side access to the API via JavaScript.
+
+# Extending the API
+
+## APIs
 
 The plugin looks for `api` packages, using the standard FarCry extension model.
 This means that it looks for components in the `packages/api` directories of
@@ -53,12 +59,12 @@ endpoints from `v2` by creating that file and not extending the original.
 All APIs should extend `farcry.plugins.api.packages.api.base`, either directly
 or via `v1`. This base component provides several helper functions.
 
-### Endpoint definitions
+## Endpoint definitions
 
 Functions in an API are exposed as an endpoint if it has a `handle` attribute,
 specifying the HTTP method and path it should respond to.
 
-#### Handle
+### Handle
 
 The `handle` attribute should be of the form:
 
@@ -71,21 +77,21 @@ Handles can also have parameter names as directories, for example:
 In that case, all parameters should have a corresponding `path` argument in the
 function. See `arguments`.
 
-#### Display name
+### Display name
 
 The `displayname` attribute value is displayed to users of the API documentation.
 
-#### Hint
+### Hint
 
 The `hint` attribute value is displayed to users as a description of the
 endpoint in the API documentation. This value can contain Markdown.
 
-#### Tags
+### Tags
 
 The `tags` attribute is a list of categories, and is used to organise endpoints
 into logical groups in the API documentation.
 
-#### Responses
+### Responses
 
 Attributes that are HTTP response codes (e.g. `200`), and `default`, are used
 to define endpoint response data structures. They take the form of the
@@ -107,7 +113,7 @@ or array of a content type:
 
     []#dmNews:An array of news
 
-#### Permission
+### Permission
 
 You can restrict access to an endpoint by specifying a `permission` attribute.
 This attribute can be one of three types of value:
@@ -116,16 +122,16 @@ This attribute can be one of three types of value:
     somevalue // can be accessed using HTTP authentication, if the user has that permission
     typename:somevalue // can be accessed by a logged in user with the specified permission on the specified type
 
-##### Basic HTTP
+#### Basic HTTP
 
 You can add custom permissions using the permissions UI in the Webtop.
 
-##### API Key
+#### API Key
 
 You can add custom permissions to the UI by extending `apiAccessKey` and adding
 values to the `ftOperations` attribute of the `authorization` property.
 
-#### Parameters
+### Parameters
 
 Parameters are defined using the arguments of the function. At the very least,
 the arguments **must** include any `handle` parameters as `path` type
@@ -146,12 +152,12 @@ attribute can be a valid response value, or a response value with `Update`
 appended to indicate that only non-system properties should be allowed, e.g.
 `#dmNewsUpdate:Updatable news properties`.
 
-### Endpoint helpers
+## Endpoint helpers
 
 Several helper functions are provided to make it easier to return well
 formatted responses from endpoints:
 
-#### addError(required string code, string message, string detail, string field, string in, any debug, boolean clearContent=true)
+### addError(required string code, string message, string detail, string field, string in, any debug, boolean clearContent=true)
 
 You can see the built in error codes in `api.cfc`, or the API documentation.
 The idea of these is that an API consumer can reference this code any time they
@@ -171,52 +177,52 @@ response.
 | debug        | Only included in the response if `request.mode.debug` is true. Only the last debug value is returned.                              |
 | clearContent | Can be set to false to allow data added to the response up to the this point to be included. Otherwise only the error is returned. |
 
-#### errorCount()
+### errorCount()
 
 Returns the number of errors that have already been added to the response.
 
-#### setResponse(required any data)
+### setResponse(required any data)
 
 Sets the entire response data object to be returned.
 
-#### addResponse(required string key, required any data)
+### addResponse(required string key, required any data)
 
 Adds the specified value to the data object to be returned.
 
-#### clearResponse()
+### clearResponse()
 
 Clears the current set of data to be returned.
 
-#### getResponseObject(struct stObject, string typename, uuid objectid)
+### getResponseObject(struct stObject, string typename, uuid objectid)
 
 Used to convert a specified item into the format appropriate for the API.
 _Either_ stObject _or_ typename and objectid are required.
 
-#### updateObject(struct stObject, struct stUpdate)
+### updateObject(struct stObject, struct stUpdate)
 
 This function expects a FarCry object and a typeUpdate body (see body parameter
 and swagger_schema). It updates the FarCry object from the data submitted in
 the format expected by the API.
 
-### Custom reponse / body schemas
+## Custom reponse / body schemas
 
 Types enabled for the content type are added to the documentation automatically
 but you can add more by copying `/farcry/plugins/api/config/swagger.json` to
 your project and setting `application.swaggerBase` to the path on application
 start.
 
-### Custom API documentation introduction
+## Custom API documentation introduction
 
 Override the `configAPI/displayIntroductionV1.cfm` file in your project.
 Additionally, you can add other webskins with that naming scheme for alternate
 APIs.
 
-### Custom error codes
+## Custom error codes
 
 Extend `farcry.plugins.api.lib.api` in your project, and set your own
 `this.codeTypeHints` and `this.codes` values.
 
-### Custom request processing
+## Custom request processing
 
 Parameter parsing, authentication, etc, are all things that are done by the
 plugin before actually calling the endpoint function. You can add your own
@@ -229,9 +235,9 @@ steps (or modify the default steps) by:
     are issues with the request
 - customize the `this.requestProcessors` variable
 
-### Best practices
+## Best practices
 
-#### Parameter validation
+### Parameter validation
 
 At the start of an endpoint function, check the validity of the parameters,
 and return errors. This includes the existance of requested objects, ranges

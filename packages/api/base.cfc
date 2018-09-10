@@ -13,6 +13,17 @@ component {
 	}
 
 	/**
+	* @handle GET /restricted
+	* @tags General
+	* @permission authenticated
+	* @200 #/definitions/Status:API Status
+	* @default #/definitions/FailedRequest:Failure
+	*/
+	public void function restrictedStatus(){
+		addResponse("version", "1.0.0");
+	}
+
+	/**
 	* @handle GET /swagger
 	* @document false
 	* @security none

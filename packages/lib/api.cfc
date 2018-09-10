@@ -112,6 +112,16 @@ component {
 		
 	}
 
+	public string function getStatelessAPIKey(required string username, numeric expiry=application.fapi.getConfig("api", "statelessKeyExpiry")) {
+		var stProfile = application.fapi.getContentType("dmProfile").getProfile(arguments.username);
+		var expiryTime = round(getTickCount() / 1000) + arguments.expiry;
+		var stringToSign = stProfile.objectid & ":" & numberFormat(expiryTime, "0");
+		var secret = application.fapi.getConfig("api", "secret");
+		var encryptedSignature = lcase(binaryEncode(application.fc.lib.cdn.cdns.s3.HMAC_SHA256(stringToSign, secret.getBytes("UTF8")), 'hex'));
+
+		return stringToSign & ":" & encryptedSignature;
+	}
+
 	public array function getAPIs() {
 		return this.apiList;
 	}
@@ -538,7 +548,7 @@ component {
 		return [];
 	}
 
-	public array function addAuthenticationPublish(required struct req) {
+	public array function addAuthenticationPublic(required struct req) {
 		arguments.req.user = {
 			"authentication" = "public"
 		};
@@ -600,12 +610,50 @@ component {
 		return [];
 	}
 
+	public array function addAuthenticationStatelessKey(required struct req) {
+		var stKey = {};
+
+		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^\w{8}-\w{4}-\w{4}-\w{16}:\w+:\w+$", arguments.req.headers.Authorization)) {
+			var stProfile = application.fapi.getContentObject(typename="dmProfile", objectid=listFirst(arguments.req.headers.Authorization, ":"));
+
+			// Validate the key signature
+			var stringToSign = listDeleteAt(arguments.req.headers.Authorization, 3, ":");
+			var secret = application.fapi.getConfig("api", "secret");
+			var encryptedSignature = lcase(binaryEncode(application.fc.lib.cdn.cdns.s3.HMAC_SHA256(stringToSign, secret.getBytes("UTF8")), 'hex'));
+			if (encryptedSignature neq listLast(arguments.req.headers.Authorization, ":")) {
+				return [{ "code"="101", "detail"="Invalid API key", "debug"={"string_to_sign"=stringToSign} }];
+			}
+
+			// No matching user
+			if (structKeyExists(stProfile, "bDefaultObject")) {
+				return [{ "code"="101", "detail"="Unknown user" }];
+			}
+
+			// Key has expired
+			var expiry = listGetAt(arguments.req.headers.Authorization, 2, ":");
+			var curtime = round(getTickCount() / 1000);
+			if (not isNumeric(expiry) or expiry < curtime) {
+				return [{ "code"="101", "detail"="Expired API key", "debug"={"current_time"=curtime} }];
+			}
+
+			arguments.req.user = {
+				"id" = stProfile.username,
+				"profile" = stProfile,
+				"authentication" = "statelesskey",
+				"groups" = application.security.userdirectories[listLast(stProfile.userdirectory)].getUserGroups(listDeleteAt(stProfile.username, listLen(stProfile.username, "_"), "_"))
+			};
+		}
+
+		return [];
+	}
+
 	public array function addAuthenticationSession(required struct req) {
 		var stKey = {};
 
 		if (application.security.isLoggedIn()) {
 			arguments.req.user = {
 				"id" = application.security.getCurrentUserID(),
+				"profile" = session.dmProfile,
 				"authentication" = "session"
 			};
 		}
@@ -629,7 +677,7 @@ component {
 		// if no authentication matched, the default is false
 		if (arguments.req.authentication eq "") {
 			arguments.req.authorized = false;
-			return [{ "code"="101" }];
+			return [{ "code"="101", "detail"="No authentication matched" }];
 		}
 
 		// no login is required for anything
@@ -702,6 +750,15 @@ component {
 				return structKeyExists(arguments.req.user.authorisation, arguments.typename)
 					and structKeyExists(arguments.req.user.authorisation[arguments.typename], arguments.permission)
 					and arguments.req.user.authorisation[arguments.typename][arguments.permission];
+			case "statelesskey":
+				switch (arguments.permission) {
+					case "list": return application.security.checkPermission(role=arguments.req.user.roles, permission="view", type=arguments.typename);
+					case "get": return application.security.checkPermission(role=arguments.req.user.roles, permission="view", type=arguments.typename);
+					case "create": return application.security.checkPermission(role=arguments.req.user.roles, permission="create", type=arguments.typename);
+					case "update": return application.security.checkPermission(role=arguments.req.user.roles, permission="edit", type=arguments.typename);
+					case "delete": return application.security.checkPermission(role=arguments.req.user.roles, permission="delete", type=arguments.typename);
+					default: return application.security.checkPermission(role=arguments.req.user.roles, permission=arguments.permission, type=arguments.typename);
+				}
 			case "basic":
 				switch (arguments.permission) {
 					case "list": return application.security.checkPermission(role=arguments.req.user.roles, permission="view", type=arguments.typename);
