@@ -936,7 +936,12 @@ component {
 		var pos = "";
 
 		if (arguments.includeTime) {
-			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'");
+			if (reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$", arguments.input)) {
+				sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+			}
+			else {
+				sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd'T'HH:mm:ss'Z'");
+			}
 		}
 		else {
 			sdf = CreateObject("java", "java.text.SimpleDateFormat").init("yyyy-MM-dd");
@@ -948,7 +953,7 @@ component {
 
 	public string function validateDate(required any input, boolean includeTime=true) {
 		if (arguments.includeTime) {
-			if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", arguments.input)) {
+			if (not reFind("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$", arguments.input)) {
 				return "Date/times must be in the form yyyy-MM-ddTHH:mm:ssZ";
 			}
 		}
