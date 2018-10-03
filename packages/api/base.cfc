@@ -222,7 +222,7 @@ component {
 	}
 
 	public void function updateObject(required struct stObject, required struct stUpdate) {
-		var swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename & "Update"].schema.properties;
+		var swaggerDef = application.fc.lib.api.swagger[request.req.handler.api].definitions[arguments.stObject.typename & "Update"].properties;
 		var key = "";
 		var stItem = {};
 		var o = application.fapi.getContentType(typename=arguments.stObject.typename);

@@ -164,6 +164,11 @@ component {
 			}
 		}
 
+		for (typename in arguments.typenames) {
+			arguments.swagger.definitions["#typename#"] = getSwaggerDefinition(typename=typename, forUpdate=false);
+			arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
+		}
+
 		if (expandTypename) {
 			for (typename in arguments.typenames) {
 				altMethod = duplicate(methodOut);
@@ -197,10 +202,6 @@ component {
 				}
 
 				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
-
-				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
-					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
-				}
 
 				structDelete(altMethod, "x-path");
 				structDelete(altMethod, "x-method");
@@ -371,7 +372,7 @@ component {
 		var prop = "";
 
 		if (structKeyExists(o, "getSwaggerDefinition")) {
-			return o.getSwaggerDefinition(typename=arguments.typename);
+			return o.getSwaggerDefinition(argumentCollection=arguments);
 		}
 
 		if (not arguments.forUpdate) {

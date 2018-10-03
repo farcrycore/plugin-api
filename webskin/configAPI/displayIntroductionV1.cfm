@@ -20,6 +20,10 @@ The following authentication methods are supported:
 	<cfoutput>- API key - include the API key in the request `Authentication` header.
 </cfoutput>
 </cfif>
+<cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "statelesskey")>
+	<cfoutput>- Stateless API key - `application.fc.lib.api.getStatelessAPIKey(username)` will return a temporary key to include in the request `Authentication` header.
+</cfoutput>
+</cfif>
 <cfif listFindNoCase(application.fapi.getConfig("api", "authentication"), "basic")>
 	<cfoutput>- Basic HTTP - pass your FarCry credentials with the request in the `Authentication` header.
 </cfoutput>

@@ -642,6 +642,7 @@ component {
 				"authentication" = "statelesskey",
 				"groups" = application.security.userdirectories[listLast(stProfile.userdirectory)].getUserGroups(listDeleteAt(stProfile.username, listLen(stProfile.username, "_"), "_"))
 			};
+			arguments.req.user.roles = application.security.factory.role.groupsToRoles(arrayToList(arguments.req.user.groups));
 		}
 
 		return [];
@@ -654,7 +655,8 @@ component {
 			arguments.req.user = {
 				"id" = application.security.getCurrentUserID(),
 				"profile" = session.dmProfile,
-				"authentication" = "session"
+				"authentication" = "session",
+				"roles" = application.security.getCurrentRoles()
 			};
 		}
 
@@ -741,6 +743,10 @@ component {
 		if (find(":", arguments.permission)) {
 			arguments.typename = listFirst(arguments.permission, ":");
 			arguments.permission = listLast(arguments.permission, ":");
+		}
+
+		if (arguments.permission eq "authenticated") {
+			return listFindNoCase("public,key,statelesskey,basic,session", arguments.req.authentication) gt 0;
 		}
 
 		switch (arguments.req.authentication) {
