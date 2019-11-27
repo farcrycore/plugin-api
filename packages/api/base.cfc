@@ -27,6 +27,7 @@ component {
 		var path = "";
 		var method = "";
 
+		/* CURRENT VERSION OF SWAGGER UI DOES NOT SUPPORT AUTHENTICATED SWAGGER LOADING
 		for (path in stSwagger.paths) {
 			for (method in stSwagger.paths[path]) {
 				if (request.req.authentication eq "public") {
@@ -45,7 +46,7 @@ component {
 					structDelete(stSwagger.paths[path][method], "x-permission");
 				}
 			}
-		}
+		}*/
 
 		setResponse(stSwagger);
 	}

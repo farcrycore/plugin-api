@@ -51,7 +51,7 @@ component {
 		"html" = ["text/html"],
 		"json" = ["text/json","application/json"]
 	};
-	this.requestProcessors = ["addHeadFlag","addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters","executeEndpointFunction","finaliseRequest"];
+	this.requestProcessors = ["addHeadFlag","addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters","executeEndpointFunction"];
 
 	this.originWhitelist = ["*"];
 	this.originWhitelistRegex = [];
@@ -89,6 +89,10 @@ component {
 			if (apiname neq "base") {
 				o = createObject("component", utils.getPath("api", apiname));
 				stMD = getMetadata(o);
+
+				if (structKeyExists(stMD, "disabled")) {
+					continue;
+				}
 
 				if (structKeyExists(stMD, "displayName")) {
 					arrayAppend(this.apiList, { "id"=apiname, "label"=stMD.displayName, "swagger"=this.apiPrefix & "/" & apiname & "/swagger" });
@@ -226,7 +230,7 @@ component {
 					for (error_code in error_codes) {
 						addError(req=request.req, res=request.res, argumentCollection=error_code);
 					}
-					sendResponse(res=request.res);
+					sendResponse(req=request.req, res=request.res);
 					return;
 				}
 			}
@@ -235,7 +239,7 @@ component {
 			addError(req=request.req, res=request.res, code="999", message=len(e.message)?e.message:e.detail, debug=application.fc.lib.error.normalizeError(e));
 		}
 
-		sendResponse(res=request.res);
+		sendResponse(req=request.req, res=request.res);
 	}
 
 	public struct function createResponse() {
@@ -754,37 +758,6 @@ component {
 		return [];
 	}
 
-	public array function finaliseRequest(required struct req, required struct res) {
-		// default response type
-		if (not structKeyExists(arguments.res, "type")) {
-			arguments.res.type = "json";
-		}
-
-		// process content
-		if (arrayLen(arguments.res.errors)) {
-			arguments.res.content["errors"] = arguments.res.errors;
-		}
-		else if (not structkeyexists(arguments.res, "content") or (isStruct(arguments.res.content) and structIsEmpty(arguments.res.content))) {
-			arguments.res["content"] = "";
-		}
-		else {
-			switch (arguments.res.type) {
-				case "json": arguments.res["content"] = serializeJSON(arguments.res.content); break;
-				case "html": savecontent variable="arguments.res.content" { dump(var=arguments.res.content); }; break;
-			}
-		}
-
-		// content id headers
-		arguments.res.headers["Content-MD5"] = hash(arguments.res.content);
-		arguments.res.headers["ETag"] = hash(arguments.res.content);
-
-		if (arguments.req.clearResponse) {
-			structDelete(arguments.res, "content");
-		}
-
-		return [];
-	}
-
 	public boolean function checkPermission(required struct req, required string permission, string typename="") {
 		if (find(":", arguments.permission)) {
 			arguments.typename = listFirst(arguments.permission, ":");
@@ -835,8 +808,35 @@ component {
 	}
 
 	// return result, based on Accept-Encoding header
-	public void function sendResponse(required struct res){
+	public void function sendResponse(required struct req, required struct res){
 		var key = "";
+
+		// default response type
+		if (not structKeyExists(arguments.res, "type")) {
+			arguments.res.type = "json";
+		}
+
+		// process content
+		if (arrayLen(arguments.res.errors)) {
+			arguments.res.content["errors"] = arguments.res.errors;
+		}
+		else if (not structkeyexists(arguments.res, "content") or (isStruct(arguments.res.content) and structIsEmpty(arguments.res.content))) {
+			arguments.res["content"] = "";
+		}
+		else {
+			switch (arguments.res.type) {
+				case "json": arguments.res["content"] = serializeJSON(arguments.res.content); break;
+				case "html": savecontent variable="arguments.res.content" { dump(var=arguments.res.content); }; break;
+			}
+		}
+
+		// content id headers
+		arguments.res.headers["Content-MD5"] = hash(arguments.res.content);
+		arguments.res.headers["ETag"] = hash(arguments.res.content);
+
+		if (arguments.req.clearResponse) {
+			structDelete(arguments.res, "content");
+		}
 
 		if (structKeyExists(arguments.res, "headers")){
 			for (key in arguments.res.headers){
