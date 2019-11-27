@@ -122,6 +122,10 @@ This attribute can be one of three types of value:
     somevalue // can be accessed using HTTP authentication, if the user has that permission
     typename:somevalue // can be accessed by a logged in user with the specified permission on the specified type
 
+### Deprecated
+
+To mark and endpoint as being deprecated, add the `@deprecated true` decorator to the function.
+
 #### Basic HTTP
 
 You can add custom permissions using the permissions UI in the Webtop.

@@ -365,8 +365,10 @@ component {
 
 	public array function addResponseType(required struct req, required struct res) {
 		if (structkeyexists(arguments.req.headers, "accept") and arguments.req.headers.accept neq "*/*"){
-			for (i=1; i<=listlen(arguments.req.headers.accept, ","); i++){
-				switch (listFirst(listgetat(arguments.req.headers.accept, i, ","), ";")) {
+			arguments.req.headers.accept = replace(arguments.req.headers.accept, ";", ",", "ALL");
+
+			for (i=1; i<=listlen(arguments.req.headers.accept); i++){
+				switch (listgetat(arguments.req.headers.accept, i)){
 					case "text/html":
 						arguments.res["type"] = "html";
 						break;

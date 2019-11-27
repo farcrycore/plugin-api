@@ -12,7 +12,15 @@ component {
 		var tags = "";
 
 		if (structIsEmpty(arguments.stSwagger)) {
-			arguments.stSwagger = structKeyExists(application, "swaggerBase") ? application.swaggerBase : deserializeJSON(fileRead(expandPath("/farcry/plugins") & "/api/config/swagger.json"));
+			if (structKeyExists(application, "swaggerBase") and isSimpleValue(application.swaggerBase)) {
+				arguments.stSwagger = deserializeJSON(fileRead(expandPath(application.swaggerBase)));
+			}
+			else if (structKeyExists(application, "swaggerBase")) {
+				arguments.stSwagger = application.swaggerBase;
+			}
+			else {
+				arguments.stSwagger = deserializeJSON(fileRead(expandPath("/farcry/plugins") & "/api/config/swagger.json"));
+			}
 			arguments.stSwagger.info.version = listLast(arguments.metadata.fullname, ".");
 			arguments.stSwagger.info.title = application.fapi.getConfig("general", "sitetitle", "") & (structKeyExists(arguments.metadata, "title") ? ": " & arguments.metadata.title : "");
 			arguments.stSwagger.info.description = application.fapi.getContentType("configAPI").getView(webskin="displayIntroduction#arguments.stSwagger.info.version#", alternateHTML="");
@@ -59,12 +67,6 @@ component {
 						break;
 				}
 			}
-
-			for (typename in arguments.typenames) {
-				if (not structKeyExists(arguments.stSwagger.definitions, typename)) {
-					arguments.stSwagger.definitions[typename] = getSwaggerDefinition(typename=typename);
-				}
-			}
 		}
 
 		if (structKeyExists(arguments.metadata, "functions")) {
@@ -74,6 +76,8 @@ component {
 				}
 			}
 		}
+
+		arguments.stSwagger.tags = getTagSummary(arguments.stSwagger);
 
 		if (structKeyExists(arguments.metadata, "extends")) {
 			getSwaggerAPI(metadata=arguments.metadata.extends, prefix=arguments.prefix, typenames=arguments.typenames, stSwagger=arguments.stSwagger, debug=1);
@@ -136,6 +140,10 @@ component {
 			methodOut["security"][arguments.metadata.security] = [];
 		}
 
+		if (structKeyExists(arguments.metadata, "deprecated")) {
+			methodOut["deprecated"] = arguments.metadata.deprecated eq "true";
+		}
+
 		if (structKeyExists(arguments.metadata, "permission")) {
 			methodOut["x-permission"] = arguments.metadata.permission;
 		}
@@ -162,11 +170,6 @@ component {
 			if ((len(attr) eq 3 and isNumeric(attr)) or attr eq "default") {
 				methodOut.responses[attr] = arguments.metadata[attr];
 			}
-		}
-
-		for (typename in arguments.typenames) {
-			arguments.swagger.definitions["#typename#"] = getSwaggerDefinition(typename=typename, forUpdate=false);
-			arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
 		}
 
 		if (expandTypename) {
@@ -203,6 +206,14 @@ component {
 
 				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
 
+
+				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
+					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true)
+				}
+				else if (listFindNoCase("GET", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, typename)) {
+					arguments.swagger.definitions[typename] = getSwaggerDefinition(typename=typename, forUpdate=false)
+				}
+
 				structDelete(altMethod, "x-path");
 				structDelete(altMethod, "x-method");
 			}
@@ -210,6 +221,9 @@ component {
 		else {
 			for (attr in methodOut.responses) {
 				methodOut.responses[attr] = getSwaggerResponse(methodOut.responses[attr]);
+				if (structKeyExists(methodOut.responses[attr], "id") and not structKeyExists(arguments.swagger.definitions, methodOut.responses[attr].id)) {
+					arguments.swagger.definitions[methodOut.responses[attr].id] = getSwaggerDefinition(typename=methodOut.responses[attr].id, forUpdate=false);
+				}
 			}
 
 			for (attr in methodOut.tags) {
@@ -224,12 +238,6 @@ component {
 					structDelete(paramIn, "type");
 				}
 			}
-
-			if (not structKeyExists(arguments.swagger.paths, methodOut["x-path"])) {
-				arguments.swagger.paths[methodOut["x-path"]] = {};
-			}
-
-			arguments.swagger.paths[methodOut["x-path"]][methodOut["x-method"]] = methodOut;
 
 			if (not structKeyExists(arguments.swagger.paths, methodOut["x-path"])) {
 				arguments.swagger.paths[methodOut["x-path"]] = {};
@@ -290,6 +298,7 @@ component {
 
 		if (refind("^\[\]##\w", def)) {
 			return {
+				"id" = listFirst(mid(def, "4", len(def)), ":"),
 				"schema" = {
 					"properties" = {
 						"items" = {
@@ -318,6 +327,7 @@ component {
 		else if (refind("^##\w", arguments.definition)) {
 			// specific type as an item
 			return {
+				"id" = listFirst(mid(def, 2, len(def)), ":"),
 				"schema" = {
 					"$ref": "##/definitions/" & mid(def, 2, len(def))
 				},
@@ -355,6 +365,7 @@ component {
 		else if (refind("^##", arguments.definition)) {
 			// specific type as an item
 			return {
+				"id" = listFirst(reReplace(arguments.definition, "^##(/definitions/)?", ""), ":"),
 				"schema" = {
 					"$ref": def
 				},
@@ -474,6 +485,78 @@ component {
 
 			return arguments.input;
 		}
+	}
+
+	public array function getTagSummary(required any stSwagger) {
+		var tags = [];
+		var tagsAdded = [];
+		var path = "";
+		var method = "";
+		var tag = "";
+
+		if (structKeyExists(arguments.stSwagger, "tags")) {
+			tags = arguments.stSwagger.tags;
+			for (tag in tags) {
+				arrayAppend(tagsAdded, tag.name);
+			}
+		}
+
+		for (path in arguments.stSwagger.paths) {
+			for (method in arguments.stSwagger.paths[path]) {
+				if (structKeyExists(arguments.stSwagger.paths[path][method], "tags")){
+					for (tag in arguments.stSwagger.paths[path][method].tags) {
+						if (not arrayFindNoCase(tagsAdded, tag)) {
+							arrayAppend(tagsAdded, tag);
+							arrayAppend(tags, {
+								"name" = tag,
+								"description" = getDescriptionByDisplayName(tag)
+							})
+						}
+					}
+				}
+			}
+		}
+
+		arraySort(tags, function(any a, any b) {
+			if (a.name lt b.name)
+				return -1;
+			else (a.name gt b.name)
+				return 1;
+			
+			return 0;
+		});
+
+		return tags;
+	}
+
+	public string function getDescriptionByDisplayName(required string displayName) {
+		for (var typename in application.stCOAPI) {
+			if (structKeyExists(application.stCOAPI[typename], "displayName") and application.stCOAPI[typename].displayName eq arguments.displayName) {
+				if (structKeyExists(application.stCOAPI[typename], "hint")) {
+					return application.stCOAPI[typename].hint;
+				}
+				else if (structKeyExists(application.stCOAPI[typename], "description")) {
+					return application.stCOAPI[typename].description;
+				}
+				else {
+					return "";
+				}
+			}
+		}
+
+		if (structKeyExists(application.stCOAPI, arguments.displayName)) {
+				if (structKeyExists(application.stCOAPI[typename], "hint")) {
+					return application.stCOAPI[typename].hint;
+				}
+				else if (structKeyExists(application.stCOAPI[typename], "description")) {
+					return application.stCOAPI[typename].description;
+				}
+				else {
+					return "";
+				}
+		}
+
+		return "";
 	}
 
 }
