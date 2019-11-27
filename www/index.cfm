@@ -7,12 +7,12 @@
 
 <cfset aAPIs = [] />
 <cfloop array="#apis#" index="thisapi">
+  <cfset arrayAppend(aAPIs, {
+    "url": thisapi.swagger,
+    "name": thisapi.label
+  }) />
 	<cfif url.api eq thisapi.id>
 		<cfset currentAPI = thisapi />
-    <cfset arrayAppend(aAPIs, {
-      "url": thisapi.swagger,
-      "name": thisapi.label
-    }) />
 	</cfif>
 </cfloop>
 
