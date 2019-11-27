@@ -51,7 +51,7 @@ component {
 		"html" = ["text/html"],
 		"json" = ["text/json","application/json"]
 	};
-	this.requestProcessors = ["addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters"];
+	this.requestProcessors = ["addHeadFlag","addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters","executeEndpointFunction","finaliseRequest"];
 
 	this.originWhitelist = ["*"];
 	this.originWhitelistRegex = [];
@@ -209,7 +209,7 @@ component {
 		var processor = "";
 		var error_code = "";
 		var error_codes = [];
-		
+
 		if (structIsEmpty(this.apis)) {
 			initializeAPIs();
 		}
@@ -226,18 +226,9 @@ component {
 					for (error_code in error_codes) {
 						addError(req=request.req, res=request.res, argumentCollection=error_code);
 					}
-				}
-				if (errorCount(request.req, request.res)) {
 					sendResponse(res=request.res);
 					return;
 				}
-			}
-
-			if (request.req.method neq "OPTIONS") {
-				invoke(this.apis[request.req.handler.api], request.req.handler.function, request.req.parameters);
-			}
-			else {
-				structDelete(request.res, "content");
 			}
 		} catch (any e) {
 			application.fc.lib.error.logData(application.fc.lib.error.normalizeError(e));
@@ -304,6 +295,17 @@ component {
 		}
 
 		return req;
+	}
+
+	public array function addHeadFlag(required struct req, required struct res) {
+		arguments.req.clearResponse = false;
+
+		if (arguments.req.method eq "HEAD") {
+			arguments.req.method = "GET";
+			arguments.req.clearResponse = true;
+		}
+
+		return [];
 	}
 
 	public array function addCORS(required struct req, required struct res) {
@@ -741,6 +743,48 @@ component {
 		return [];
 	}
 
+	public array function executeEndpointFunction(required struct req, required struct res) {
+		if (arguments.req.method neq "OPTIONS") {
+			invoke(this.apis[request.req.handler.api], arguments.req.handler.function, arguments.req.parameters);
+		}
+		else {
+			structDelete(arguments.res, "content");
+		}
+
+		return [];
+	}
+
+	public array function finaliseRequest(required struct req, required struct res) {
+		// default response type
+		if (not structKeyExists(arguments.res, "type")) {
+			arguments.res.type = "json";
+		}
+
+		// process content
+		if (arrayLen(arguments.res.errors)) {
+			arguments.res.content["errors"] = arguments.res.errors;
+		}
+		else if (not structkeyexists(arguments.res, "content") or (isStruct(arguments.res.content) and structIsEmpty(arguments.res.content))) {
+			arguments.res["content"] = "";
+		}
+		else {
+			switch (arguments.res.type) {
+				case "json": arguments.res["content"] = serializeJSON(arguments.res.content); break;
+				case "html": savecontent variable="arguments.res.content" { dump(var=arguments.res.content); }; break;
+			}
+		}
+
+		// content id headers
+		arguments.res.headers["Content-MD5"] = hash(arguments.res.content);
+		arguments.res.headers["ETag"] = hash(arguments.res.content);
+
+		if (arguments.req.clearResponse) {
+			structDelete(arguments.res, "content");
+		}
+
+		return [];
+	}
+
 	public boolean function checkPermission(required struct req, required string permission, string typename="") {
 		if (find(":", arguments.permission)) {
 			arguments.typename = listFirst(arguments.permission, ":");
@@ -800,23 +844,6 @@ component {
 			}
 
 			cfheader(name="processing_time", value=getTickCount() - arguments.res.start);
-		}
-
-		if (arrayLen(arguments.res.errors)) {
-			arguments.res.content["errors"] = arguments.res.errors;
-		}
-		else if (not structkeyexists(arguments.res, "content") or (isStruct(arguments.res.content) and structIsEmpty(arguments.res.content))) {
-			arguments.res["content"] = "";
-		}
-
-		if (not structKeyExists(arguments.res, "type")) {
-			arguments.res.type = "json";
-		}
-
-		if (arguments.res.type eq "html" and not isSimpleValue(arguments.res.content)){
-			savecontent variable="arguments.res.content" {
-				dump(var=arguments.res.content);
-			}
 		}
 
 		if (structKeyExists(arguments.res, "content")) {
