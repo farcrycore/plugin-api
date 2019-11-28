@@ -69,6 +69,11 @@ component {
 			}
 		}
 
+		for (typename in arguments.typenames) {
+			arguments.stSwagger.definitions["#typename#"] = getSwaggerDefinition(typename=typename, forUpdate=false);
+			arguments.stSwagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true);
+		}
+
 		if (structKeyExists(arguments.metadata, "functions")) {
 			for (methodIn in arguments.metadata.functions) {
 				if (structKeyExists(methodIn, "handle") and (not structKeyExists(methodIn, "document") or methodIn.document eq true)) {
@@ -205,7 +210,6 @@ component {
 				}
 
 				arguments.swagger.paths[altMethod["x-path"]][altMethod["x-method"]] = altMethod;
-
 
 				if (listFindNoCase("CREATE,PUT,POST", altMethod["x-method"]) and not structKeyExists(arguments.swagger.definitions, "#typename#Update")) {
 					arguments.swagger.definitions["#typename#Update"] = getSwaggerDefinition(typename=typename, forUpdate=true)
