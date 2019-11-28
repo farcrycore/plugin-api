@@ -93,6 +93,7 @@
         requestInterceptor: function(e) {
           var token = window.configSystem.auth().getIn(["authorized"]);
           if (token != null && e.headers.authorization == null) {
+            var j = token.toJSON();
             if (j.api_key)
               e.headers[j.api_key.schema.name] = j.api_key.value;
             if (j.basic)
