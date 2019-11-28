@@ -26,15 +26,18 @@ component {
 		var stSwagger = duplicate(application.fc.lib.api.swagger[request.req.handler.api]);
 		var path = "";
 		var method = "";
+		var allowedTags = [];
+		var i = 0;
 
-		/* CURRENT VERSION OF SWAGGER UI DOES NOT SUPPORT AUTHENTICATED SWAGGER LOADING
 		for (path in stSwagger.paths) {
 			for (method in stSwagger.paths[path]) {
 				if (request.req.authentication eq "public") {
 					structDelete(stSwagger.paths[path][method], "x-permission");
+					arrayAppend(allowedTags, stSwagger.paths[path][method].tags);
 				}
 				else if (stSwagger.paths[path][method]["x-permission"] eq "public") {
 					structDelete(stSwagger.paths[path][method], "x-permission");
+					arrayAppend(allowedTags, stSwagger.paths[path][method].tags);
 				}
 				else if (not structKeyExists(request.req, "user")) {
 					structDelete(stSwagger.paths[path], method);
@@ -44,9 +47,16 @@ component {
 				}
 				else {
 					structDelete(stSwagger.paths[path][method], "x-permission");
+					arrayAppend(allowedTags, stSwagger.paths[path][method].tags);
 				}
 			}
-		}*/
+		}
+
+		for (i=arrayLen(stSwagger.tags); i>0; i--) {
+			if (not arrayFindNoCase(allowedTags, stSwagger.tags[i].name)) {
+				arrayDeleteAt(stSwagger.tags, i);
+			}
+		}
 
 		setResponse(stSwagger);
 	}

@@ -70,8 +70,36 @@
         ],
         plugins: [
           SwaggerUIBundle.plugins.DownloadUrl,
-          SwaggerUIBundle.plugins.Topbar
+          SwaggerUIBundle.plugins.Topbar,
+          function (system) {
+            window.configSystem = system;
+            return {
+              statePlugins: {
+                auth: {
+                  wrapActions: {
+                    authorize: function(oriAction, system) {
+                      return function(a) {
+                        var r = oriAction(a);
+                        system.specActions.download();
+                        return r;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         ],
+        requestInterceptor: function(e) {
+          var token = window.configSystem.auth().getIn(["authorized"]);
+          if (token != null && e.headers.authorization == null) {
+            if (j.api_key)
+              e.headers[j.api_key.schema.name] = j.api_key.value;
+            if (j.basic)
+              e.headers.Authorization = j.basic.value.header;
+          }
+          return e;
+        },
         layout: "StandaloneLayout",
       })
 
