@@ -370,6 +370,7 @@ component {
 	}
 
 	public array function addResponseType(required struct req, required struct res) {
+		var i = 0;
 		if (structkeyexists(arguments.req.headers, "accept") and arguments.req.headers.accept neq "*/*"){
 			arguments.req.headers.accept = replace(arguments.req.headers.accept, ";", ",", "ALL");
 
