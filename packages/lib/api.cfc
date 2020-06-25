@@ -418,6 +418,10 @@ component {
 				arguments.req["content"] = deserializeJSON(arguments.req.content_string);
 				return [];
 				break;
+			case "application/x-www-form-urlencoded":
+				arguments.req["content"] = arguments.req.form;
+				return [];
+				break;
 			default:
 				if (len(arguments.req.content_string)) {
 					return [{"code"="004"}];
