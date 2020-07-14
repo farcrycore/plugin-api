@@ -383,12 +383,18 @@ component {
 
 	public struct function getSwaggerDefinition(required string typename, boolean forUpdate=false) {
 		var o = application.fapi.getContentType(typename=arguments.typename);
-		var properties = {};
-		var prop = "";
 
 		if (structKeyExists(o, "getSwaggerDefinition")) {
 			return o.getSwaggerDefinition(argumentCollection=arguments);
 		}
+
+		return getSwaggerDefinitionDefault(argumentCollection=arguments);
+	}
+
+	public struct function getSwaggerDefinitionDefault(required string typename, boolean forUpdate=false) {
+		var o = application.fapi.getContentType(typename=arguments.typename);
+		var properties = {};
+		var prop = "";
 
 		if (not arguments.forUpdate) {
 			properties["objectid"] = {
