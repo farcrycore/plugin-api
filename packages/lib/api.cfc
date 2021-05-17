@@ -422,6 +422,10 @@ component {
 				arguments.req["content"] = arguments.req.form;
 				return [];
 				break;
+			case "multipart/form-data":
+				arguments.req["content"] = arguments.req.form;
+				return [];
+				break;
 			default:
 				if (len(arguments.req.content_string)) {
 					return [{"code"="004"}];
