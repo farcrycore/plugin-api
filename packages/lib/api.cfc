@@ -835,7 +835,11 @@ component {
 		else {
 			switch (arguments.res.type) {
 				case "json": arguments.res["content"] = serializeJSON(arguments.res.content); break;
-				case "html": savecontent variable="arguments.res.content" { dump(var=arguments.res.content); }; break;
+				case "html": 
+					if (!isSimpleValue(arguments.res.content)) {
+						savecontent variable="arguments.res.content" { dump(var=arguments.res.content); };
+					}
+					break;
 			}
 		}
 
