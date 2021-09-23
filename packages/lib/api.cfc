@@ -77,7 +77,7 @@ component {
 		var apis = listToArray(utils.getComponents("api"));
 		var apiname = "";
 		var o = "";
-		var swagger = isDefined("application.fc.lib.swagger") ? application.fc.lib.swagger : createobject("component", "swagger");
+		var swaggerPath = utils.getPath("lib", "swagger")
 
 		if (not arguments.bFlush and not structIsEmpty(this.apis)) {
 			return;
@@ -106,7 +106,7 @@ component {
 				}
 
 				this.apis[apiname] = o;
-				this.swagger[apiname] = swagger.getSwaggerAPI(metadata=stMD, prefix=this.apiPrefix & "/" & apiname, typenames=listToArray(application.fapi.getConfig("api", "contentTypes", "")));
+				this.swagger[apiname] = duplicate(createobject("component", swaggerPath).getSwaggerAPI(metadata=stMD, prefix=this.apiPrefix & "/" & apiname, typenames=listToArray(application.fapi.getConfig("api", "contentTypes", "")), stSwagger={}));
 				addHandlers(name=apiname, metadata=stMD);
 			}
 		}
