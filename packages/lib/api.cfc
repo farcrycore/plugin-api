@@ -578,7 +578,7 @@ component {
 		var stResult = {};
 		var i = 0;
 
-		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^Basic \w+$", arguments.req.headers.Authorization)) {
+		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^Basic .+$", arguments.req.headers.Authorization)) {
 			auth = ToString(ToBinary(listLast(arguments.req.headers.Authorization, " ")));
 			form.userlogin = listFirst(auth, ":");
 			form.password = listRest(auth, ":");
@@ -588,7 +588,9 @@ component {
 				arguments.req.user = {
 					"id" = stResult.userid & "_CLIENTUD",
 					"authentication" = "basic",
-					"groups" = application.security.userdirectories.CLIENTUD.getUserGroups(stResult.userid)
+					"profile" = application.fapi.getContentType("dmProfile").getProfile(stResult.userid, stResult.ud),
+					"groups" = application.security.userdirectories.CLIENTUD.getUserGroups(stResult.userid),
+					"roles" = []
 				};
 
 				for (i=1; i<=arrayLen(arguments.req.user.groups); i++) {
