@@ -4,6 +4,7 @@
 		<subsection id="security">
 			<menu id="apimenu" sequence="200" label="API">
 				<menuitem id="accesskeys" sequence="10" label="Access Keys" typename="apiAccessKey" />
+				<menuitem id="useraccesskeys" sequence="20" label="User Access Keys" typename="apiUserAccessKey" />
 			</menu>
 		</subsection>
 	</section>

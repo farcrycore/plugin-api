@@ -537,8 +537,38 @@ component {
 		return errors;
 	}
 
+	public array function getAuthenticationMethods() {
+		if (not structKeyExists(this, "authenticationMethods")) {
+			var st = getMetadata(this);
+			var aMethods = [];
+
+			for (var i=1; i<=arrayLen(st.functions); i++) {
+				if (structKeyExists(st.functions[i], "handle") and st.functions[i].handle eq "auth") {
+					arrayAppend(aMethods, {
+						"method" = st.functions[i].name,
+						"key" = st.functions[i].key,
+						"label" = st.functions[i].displayname,
+						"priority" = structKeyExists(st.functions[i], "priority") ? st.functions[i].priority : 0
+					})
+				}
+			}
+
+			arraySort(aMethods, function(a, b) {
+				if (a.priority eq b.priority) return -1;
+				if (a.priority lt b.priority) return -1;
+				if (a.priority gt b.priority) return 1;
+
+				return 0;
+			})
+
+			this.authenticationMethods = aMethods;
+		}
+
+		return this.authenticationMethods;
+	}
+
 	public array function addAuthentication(required struct req, required struct res) {
-		var allowedAuth = listToArray(application.fapi.getConfig("api", "authentication"));
+		var allowedAuth = application.fapi.getConfig("api", "authentication");
 		var thisauth = "";
 		var result = [];
 
@@ -547,16 +577,21 @@ component {
 			return [];
 		}
 
-		for (thisauth in allowedAuth) {
-			result = invoke(this, "addAuthentication#thisauth#", { req=arguments.req });
+		var authMethods = getAuthenticationMethods();
+		for (thisauth in authMethods) {
+			if (not listFindNoCase(allowedAuth, thisauth.key)) {
+				continue;
+			}
+
+			result = invoke(this, thisauth.method, { req=arguments.req });
 
 			if (arrayLen(result)) {
 				// this auth method matched, but returned an error
-				arguments.req.authentication = thisauth;
+				arguments.req.authentication = thisauth.key;
 				return result;
 			}
 			else if (structKeyExists(arguments.req, "user")) {
-				arguments.req.authentication = thisauth;
+				arguments.req.authentication = thisauth.key;
 				return result;
 			}
 		}
@@ -565,6 +600,12 @@ component {
 		return [];
 	}
 
+	/**
+	 * @handle auth
+	 * @key public
+	 * @displayname No authentication
+	 * @priority 10
+	 */
 	public array function addAuthenticationPublic(required struct req) {
 		arguments.req.user = {
 			"authentication" = "public"
@@ -573,6 +614,12 @@ component {
 		return [];
 	}
 
+	/**
+	 * @handle auth
+	 * @key basic
+	 * @displayname Basic HTTP (FarCry users)
+	 * @priority 20
+	 */
 	public array function addAuthenticationBasic(required struct req) {
 		var auth = "";
 		var stResult = {};
@@ -609,6 +656,46 @@ component {
 		return [];
 	}
 
+	/**
+	 * @handle auth
+	 * @key userkey
+	 * @displayname User API Key
+	 * @priority 25
+	 */
+	public array function addAuthenticationUserKey(required struct req) {
+		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^\w+user:$", arguments.req.headers.Authorization)) {
+			var stKey = stKey = this.oAccessKey.getByKey(key=listRest(arguments.req.headers.Authorization, ":"));
+
+			if (structIsEmpty(stKey)) {
+				return [{ "code"="101", "detail"="Unknown User API key" }];
+			}
+
+			arguments.req.user = {
+				"authentication" = "userkey",
+				"profile" = application.fapi.getContentObject(typename="apiUserAccessKey", objectid=stKey.userID),
+				"groups" = [],
+				"roles" = []
+			};
+			arguments.req.user["id"] = arguments.req.user.profile.username;
+			arguments.req.user["groups"] = application.security.userdirectories[listLast(stProfile.userdirectory)].getUserGroups(listDeleteAt(stProfile.username, listLen(stProfile.username, "_"), "_"))
+			arguments.req.user["roles"] = application.security.factory.role.groupsToRoles(arrayToList(arguments.req.user.groups));
+
+			arguments.req.user = {
+				"id" = stKey.accessKeyID,
+				"authentication" = "key",
+				"authorisation" = deserializeJSON(stKey.authorisation)
+			};
+		}
+
+		return [];
+	}
+
+	/**
+	 * @handle auth
+	 * @key key
+	 * @displayname API Key
+	 * @priority 30
+	 */
 	public array function addAuthenticationKey(required struct req) {
 		var stKey = {};
 
@@ -629,6 +716,12 @@ component {
 		return [];
 	}
 
+	/**
+	 * @handle auth
+	 * @key statelesskey
+	 * @displayname Stateless API Key
+	 * @priority 40
+	 */
 	public array function addAuthenticationStatelessKey(required struct req) {
 		var stKey = {};
 
@@ -667,6 +760,12 @@ component {
 		return [];
 	}
 
+	/**
+	 * @handle auth
+	 * @key session
+	 * @displayname FarCry Session
+	 * @priority 50
+	 */
 	public array function addAuthenticationSession(required struct req) {
 		var stKey = {};
 

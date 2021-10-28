@@ -2,7 +2,7 @@ component extends="farcry.core.packages.forms.forms" key="api" fuAlias="api" dis
 
 	property name="authentication" type="string" ftDefault="basic,key,session"
 			 ftSeq="1" ftFieldSet="Security" ftLabel="Authentication"
-			 ftType="list" ftList="public:No authentication,basic:Basic HTTP (FarCry users),key:API Key,statelesskey:Stateless API Key,session:FarCry Session"
+			 ftType="list" ftListData="getAuthenticationMethods"
 			 ftSelectMultiple="true";
 
 	property name="contentTypes" type="longchar" ftDefault=""
@@ -20,6 +20,20 @@ component extends="farcry.core.packages.forms.forms" key="api" fuAlias="api" dis
 	property name="statelessKeyExpiry" type="integer" ftDefault="3600"
 			 ftSeq="12" ftFieldSet="Statelss API Key" ftLabel="Expiry"
 			 ftHint="How long stateless keys should be valid for";
+
+	public query function getAuthenticationMethods() {
+		var qMethods = queryNew("value,name");
+		var authMethods = application.fc.lib.api.getAuthenticationMethods();
+
+		for (var i=1; i<=arrayLen(authMethods); i++) {
+			queryAddRow(qMethods, {
+				value = authMethods[i].key,
+				name = authMethods[i].label
+			});
+		}
+
+		return qMethods;
+	}
 
 	public query function getTypes() {
 		var qTypes = querynew("value,name");
