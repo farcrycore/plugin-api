@@ -663,7 +663,7 @@ component {
 	 * @priority 25
 	 */
 	public array function addAuthenticationUserKey(required struct req) {
-		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^\w+user:$", arguments.req.headers.Authorization)) {
+		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^\w+userkey:$", arguments.req.headers.Authorization)) {
 			var stKey = stKey = this.oAccessKey.getByKey(key=listRest(arguments.req.headers.Authorization, ":"));
 
 			if (structIsEmpty(stKey)) {
