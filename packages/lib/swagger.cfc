@@ -528,9 +528,13 @@ component {
 		}
 
 		arraySort(tags, function(any a, any b) {
-			if (a.name lt b.name)
+			if (!len(a.name) && !len(b.name))
+				return 0;
+			else if (a.name lt b.name)
 				return -1;
-			else (a.name gt b.name)
+			else if (a.name gt b.name)
+				return 1;
+			else if (!len(a.name))
 				return 1;
 			
 			return 0;
