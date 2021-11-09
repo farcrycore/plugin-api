@@ -677,15 +677,12 @@ component {
 				"groups" = [],
 				"roles" = []
 			};
-			arguments.req.user["id"] = arguments.req.user.profile.username;
-			arguments.req.user["groups"] = application.security.userdirectories[listLast(stProfile.userdirectory)].getUserGroups(listDeleteAt(stProfile.username, listLen(stProfile.username, "_"), "_"))
-			arguments.req.user["roles"] = application.security.factory.role.groupsToRoles(arrayToList(arguments.req.user.groups));
-
-			arguments.req.user = {
-				"id" = stKey.accessKeyID,
-				"authentication" = "key",
-				"authorisation" = deserializeJSON(stKey.authorisation)
-			};
+			arguments.req.user.id = arguments.req.user.profile.username;
+			arguments.req.user.groups = application.security.userdirectories[listLast(arguments.req.user.profile.userdirectory)].getUserGroups(listDeleteAt(arguments.req.user.profile.username, listLen(arguments.req.user.profile.username, "_"), "_"))
+			for (var i=1; i<= arrayLen(arguments.req.user.groups); i++) {
+				arguments.req.user.groups[i] = "#arguments.req.user.groups[i]#_#arguments.req.user.profile.userdirectory#";
+			}
+			arguments.req.user.roles = application.security.factory.role.groupsToRoles(arguments.req.user.groups);
 		}
 
 		return [];
