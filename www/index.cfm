@@ -2,6 +2,15 @@
 
 <cfset application.fc.lib.api.initializeAPIs() />
 <cfset apis = application.fc.lib.api.getAPIs() />
+<!--- sort APIs with "v" first, then the rest alphabetically --->
+<cfset arraySort(apis, function(a, b) {
+  if (left(a.label, 1) eq "v" && left(b.label, 1) neq "v") return -1;
+  if (left(a.label, 1) neq "v" && left(b.label, 1) eq "v") return 1;
+  if (a.label eq b.label) return -1;
+  if (a.label lt b.label) return -1;
+  if (a.label gt b.label) return 1;
+  return 0;
+})>
 
 <cfparam name="url.api" default="#apis[1].id#">
 
