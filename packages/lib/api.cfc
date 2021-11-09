@@ -604,7 +604,7 @@ component {
 	 * @handle auth
 	 * @key public
 	 * @displayname No authentication
-	 * @priority 10
+	 * @priority 100
 	 */
 	public array function addAuthenticationPublic(required struct req) {
 		arguments.req.user = {
