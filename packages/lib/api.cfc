@@ -84,6 +84,7 @@ component {
 		}
 
 		this.oAccessKey = application.fapi.getContentType(typename="apiAccessKey");
+		this.oUserAccessKey = application.fapi.getContentType(typename="apiUserAccessKey");
 
 		for (apiname in apis){
 			if (apiname neq "base") {
@@ -663,9 +664,9 @@ component {
 	 * @priority 25
 	 */
 	public array function addAuthenticationUserKey(required struct req) {
-		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^\w+userkey:$", arguments.req.headers.Authorization)) {
-			var stKey = stKey = this.oAccessKey.getByKey(key=listRest(arguments.req.headers.Authorization, ":"));
-
+		if (structKeyExists(arguments.req.headers, "Authorization") and reFindNoCase("^userkey:\w+$", arguments.req.headers.Authorization)) {
+			var stKey = this.oUserAccessKey.getByKey(key=listRest(arguments.req.headers.Authorization, ":"));
+			
 			if (structIsEmpty(stKey)) {
 				return [{ "code"="101", "detail"="Unknown User API key" }];
 			}
