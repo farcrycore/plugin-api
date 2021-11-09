@@ -673,7 +673,7 @@ component {
 
 			arguments.req.user = {
 				"authentication" = "userkey",
-				"profile" = application.fapi.getContentObject(typename="apiUserAccessKey", objectid=stKey.userID),
+				"profile" = application.fapi.getContentObject(typename="dmProfile", objectid=stKey.userID),
 				"groups" = [],
 				"roles" = []
 			};
