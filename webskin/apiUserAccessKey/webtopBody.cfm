@@ -4,10 +4,10 @@
 
 <ft:objectadmin 
 	typename="apiUserAccessKey"
-	title="UserAPI Access Key Administration"
-	columnList="userID,device,bActive,accessKeyID,datetimelastCreated,datetimelastUpdated"
-	sortableColumns="userID,device,bActive,accessKeyID,datetimelastCreated,datetimelastUpdated"
+	title="API User Access Key Administration"
+	columnList="userID,device,bActive,accessKeyID,datetimecreated,datetimelastupdated"
+	sortableColumns="userID,device,bActive,accessKeyID,datetimecreated,datetimelastupdated"
 	lFilterFields="userID,device,accessKeyID"
-	sqlorderby="datetimelastUpdated desc" />
+	sqlorderby="datetimelastupdated desc" />
 
 <cfsetting enablecfoutputonly="false">

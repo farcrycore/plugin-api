@@ -5,9 +5,9 @@
 <ft:objectadmin 
 	typename="apiAccessKey"
 	title="API Access Key Administration"
-	columnList="title,bActive,accessKeyID,datetimelastCreated,datetimelastUpdated"
-	sortableColumns="title,bActive,accessKeyID,datetimelastCreated,datetimelastUpdated"
+	columnList="title,bActive,accessKeyID,datetimecreated,datetimelastupdated"
+	sortableColumns="title,bActive,accessKeyID,datetimecreated,datetimelastupdated"
 	lFilterFields="title,accessKeyID"
-	sqlorderby="datetimelastUpdated desc" />
+	sqlorderby="datetimelastupdated desc" />
 
 <cfsetting enablecfoutputonly="false">
