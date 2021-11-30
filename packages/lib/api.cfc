@@ -1030,6 +1030,11 @@ component {
 		}
 	}
 
+	public void function setResponseType(required struct res, required string type) {
+		arguments.res.type = arguments.type;
+		arguments.res.headers["Content-Type"] = arguments.type
+	}
+
 	public void function setResponse(required struct res, required any data) {
 		arguments.res.content = duplicate(arguments.data);
 	}

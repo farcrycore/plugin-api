@@ -71,6 +71,10 @@ component {
 		return application.fc.lib.api.errorCount(req=request.req, res=request.res);
 	}
 
+	public void function setResponseType(required string type) {
+		application.fc.lib.api.setResponseType(res=request.res, argumentCollection=arguments);
+	}
+
 	public void function setResponse(required any data) {
 		application.fc.lib.api.setResponse(res=request.res, res=request.res, argumentCollection=arguments);
 	}
