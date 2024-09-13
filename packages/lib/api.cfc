@@ -1000,7 +1000,7 @@ component {
 			this.clearResponse(res=arguments.res);
 		}
 
-		if (request.mode.debug or isDefined("arguments.req.query_params.debug")) {
+		if (request.mode.debug) {
 			addResponse(res=arguments.res, key="x-request", data={
 				"method" = arguments.req.method,
 				"url" = arguments.req.url,
