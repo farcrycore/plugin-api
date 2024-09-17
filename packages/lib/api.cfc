@@ -936,7 +936,13 @@ component {
 				case "json": arguments.res["content"] = serializeJSON(arguments.res.content); break;
 				case "html": 
 					if (!isSimpleValue(arguments.res.content)) {
-						savecontent variable="arguments.res.content" { dump(var=arguments.res.content); };
+						savecontent variable="arguments.res.content" { 
+							// only dump complex objects if debugging is enabled
+							if (request.mode.debug) {
+								dump(var=arguments.res.content);
+							}
+							// otherwise leave the output blank
+						};
 					}
 					break;
 			}
