@@ -247,9 +247,9 @@ component {
 		return {
 			"start" = getTickCount(),
 			"status" = "200 Ok",
-			"content" = {},
+			"content" = structNew("ordered"),
 			"errors" = [],
-			"headers" = {}
+			"headers" = structNew("ordered")
 		};
 	}
 
@@ -1050,7 +1050,7 @@ component {
 	}
 
 	public void function clearResponse(required struct res) {
-		arguments.res.content = {};
+		arguments.res.content = structNew("ordered");
 	}
 
 	public query function getErrorCodes() {
