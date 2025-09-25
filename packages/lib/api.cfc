@@ -219,8 +219,11 @@ component {
 			initializeAPIs();
 		}
 
-		request.res = createResponse();
+		request.apiRequestID = lcase(createUUID());
+		request.apiRequestDateTime = dateFormat(now(), "yyyy-mm-dd") & "T" & timeFormat(now(), "HH:mm:ss");
+
 		request.req = createRequest();
+		request.res = createResponse();
 
 		try {
 			// each addXxx function checks the request to add information to the req
@@ -244,6 +247,10 @@ component {
 	}
 
 	public struct function createResponse() {
+
+		var headers = structNew("ordered");
+		headers["X-Request-ID"] = request.apiRequestID;
+
 		return {
 			"start" = getTickCount(),
 			"status" = "200 Ok",
@@ -265,9 +272,17 @@ component {
 			"headers" = duplicate(requestData.headers),
 			"content_string" = requestData.content,
 			"content" = {},
-			"form" = duplicate(form)
+			"form" = duplicate(form),
+			"requestid" = request.apiRequestID,
+			"requestdatetime" = request.apiRequestDateTime
 		};
 		var qs = [];
+
+		// use the incoming request id if one exists
+		if (structKeyExists(req.headers, "X-Request-ID") and len(req.headers["X-Request-ID"]) lte 64 and arrayLen(reMatchNoCase("^[a-f0-9\-_]+$", req.headers["X-Request-ID"]))) {
+			req.requestId = req.headers["X-Request-ID"];
+			request.apiRequestID = req.requestId;
+		}
 
 		// pull out the interesting query variables
 		for (key in url){
@@ -1024,6 +1039,8 @@ component {
 		}
 
 		arrayappend(errors, err);
+		addResponse(res=arguments.res, key="requestId", data=req.requestid);
+		addResponse(res=arguments.res, key="requestDateTime", data=request.apiRequestDateTime);
 		addResponse(res=arguments.res, key="errors", data=errors);
 	}
 
