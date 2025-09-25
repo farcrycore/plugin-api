@@ -1,6 +1,6 @@
 component extends="farcry.core.packages.types.types" displayName="API Logging" {
 
-    property name="id" type="identity" required="true" default="0"
+    property name="id" type="identity" dbPrimaryKey="true" required="true" default="0"
              ftSeq="1" ftFieldset="Logging" ftLabel="ID" ftDisplayOnly="true";
 
 	property name="req" type="json" required="false"
