@@ -318,7 +318,7 @@ component {
 	}
 
 	public array function addHeadFlag(required struct req, required struct res) {
-		arguments.req.clearResponse = false;
+		arguments.req["clearResponse"] = false;
 
 		if (arguments.req.method eq "HEAD") {
 			arguments.req.method = "GET";
@@ -361,10 +361,10 @@ component {
 		for (handler in this.handlers) {
 			if (handler.java_regex.matcher( javaCast( "string", arguments.req.url ) ).matches()) {
 				if (handler.method eq arguments.req.method) {
-					arguments.req.handler = handler;
+					arguments.req["handler"] = handler;
 				}
 				else if (structKeyExists(arguments.req.headers, "Access-Control-Request-Method") and handler.method eq arguments.req.headers["Access-Control-Request-Method"]) {
-					arguments.req.handler = handler;
+					arguments.req["handler"] = handler;
 				}
 				arrayAppend(allowed_methods, ucase(handler.method));
 			}
@@ -419,7 +419,7 @@ component {
 			arguments.req["content_type"] = arguments.req.headers["content-type"];
 		}
 		else {
-			arguments.req.content_type = "";
+			arguments.req["content_type"] = "";
 		}
 
 		if (len(arguments.req.content_string)) {
@@ -548,7 +548,7 @@ component {
 			}
 		}
 
-		arguments.req.parameters = parameters;
+		arguments.req["parameters"] = parameters;
 
 		return errors;
 	}
@@ -589,7 +589,7 @@ component {
 		var result = [];
 
 		if (arguments.req.method eq "OPTIONS") {
-			arguments.req.authentication = "";
+			arguments.req["authentication"] = "";
 			return [];
 		}
 
@@ -603,16 +603,16 @@ component {
 
 			if (arrayLen(result)) {
 				// this auth method matched, but returned an error
-				arguments.req.authentication = thisauth.key;
+				arguments.req["authentication"] = thisauth.key;
 				return result;
 			}
 			else if (structKeyExists(arguments.req, "user")) {
-				arguments.req.authentication = thisauth.key;
+				arguments.req["authentication"] = thisauth.key;
 				return result;
 			}
 		}
 
-		arguments.req.authentication = "";
+		arguments.req["authentication"] = "";
 		return [];
 	}
 
@@ -623,7 +623,7 @@ component {
 	 * @priority 100
 	 */
 	public array function addAuthenticationPublic(required struct req) {
-		arguments.req.user = {
+		arguments.req["user"] = {
 			"authentication" = "public"
 		};
 
@@ -648,7 +648,7 @@ component {
 			stResult = application.security.userdirectories.CLIENTUD.authenticate();
 
 			if (stResult.authenticated) {
-				arguments.req.user = {
+				arguments.req["user"] = {
 					"id" = stResult.userid & "_CLIENTUD",
 					"authentication" = "basic",
 					"profile" = application.fapi.getContentType("dmProfile").getProfile(stResult.userid, stResult.ud),
@@ -686,7 +686,7 @@ component {
 				return [{ "code"="101", "detail"="Unknown User API key" }];
 			}
 
-			arguments.req.user = {
+			arguments.req["user"] = {
 				"authentication" = "userkey",
 				"profile" = application.fapi.getContentObject(typename="dmProfile", objectid=stKey.userID),
 				"groups" = [],
@@ -719,7 +719,7 @@ component {
 				return [{ "code"="101", "detail"="Unknown API key" }];
 			}
 
-			arguments.req.user = {
+			arguments.req["user"] = {
 				"id" = stKey.accessKeyID,
 				"authentication" = "key",
 				"authorisation" = deserializeJSON(stKey.authorisation)
@@ -761,7 +761,7 @@ component {
 				return [{ "code"="101", "detail"="Expired API key", "debug"={"current_time"=curtime} }];
 			}
 
-			arguments.req.user = {
+			arguments.req["user"] = {
 				"id" = stProfile.username,
 				"profile" = stProfile,
 				"authentication" = "statelesskey",
@@ -783,7 +783,7 @@ component {
 		var stKey = {};
 
 		if (application.security.isLoggedIn()) {
-			arguments.req.user = {
+			arguments.req["user"] = {
 				"id" = application.security.getCurrentUserID(),
 				"profile" = session.dmProfile,
 				"authentication" = "session",
@@ -797,25 +797,25 @@ component {
 	public array function addAuthorization(required struct req) {
 		// ignore authentication for OPTIONS requests
 		if (arguments.req.method eq "OPTIONS") {
-			arguments.req.authorized = true;
+			arguments.req["authorized"] = true;
 			return [];
 		}
 
 		// no login is required for this endpoint
 		if (arguments.req.handler.permission eq "public") {
-			arguments.req.authorized = true;
+			arguments.req["authorized"] = true;
 			return [];
 		}
 
 		// if no authentication matched, the default is false
 		if (arguments.req.authentication eq "") {
-			arguments.req.authorized = false;
+			arguments.req["authorized"] = false;
 			return [{ "code"="101", "detail"="No authentication matched" }];
 		}
 
 		// no login is required for anything
 		if (arguments.req.authentication eq "public") {
-			arguments.req.authorized = true;
+			arguments.req["authorized"] = true;
 			return [];
 		}
 
@@ -826,19 +826,19 @@ component {
 
 		// any authentication access is allowed
 		if (arguments.req.handler.permission eq "authenticated") {
-			arguments.req.authorized = true;
+			arguments.req["authorized"] = true;
 			return [];
 		}
 
 		// permission is based on a parameter in the endpoint
 		else if (left(arguments.req.handler.permission, 10) eq "{typename}") {
-			arguments.req.authorized = checkPermission(req=arguments.req, permission=listLast(arguments.req.handler.permission, ":"), typename=arguments.req.parameters.typename);
+			arguments.req["authorized"] = checkPermission(req=arguments.req, permission=listLast(arguments.req.handler.permission, ":"), typename=arguments.req.parameters.typename);
 		}
 		else if (find(":", arguments.req.handler.permission)) {
-			arguments.req.authorized = checkPermission(req=arguments.req, permission=listLast(arguments.req.handler.permission, ":"), typename=listFirst(arguments.req.handler.permission, ":"));
+			arguments.req["authorized"] = checkPermission(req=arguments.req, permission=listLast(arguments.req.handler.permission, ":"), typename=listFirst(arguments.req.handler.permission, ":"));
 		}
 		else {
-			arguments.req.authorized = checkPermission(req=arguments.req, permission=arguments.req.handler.permission);
+			arguments.req["authorized"] = checkPermission(req=arguments.req, permission=arguments.req.handler.permission);
 		}
 
 		if (not arguments.req.authorized) {
