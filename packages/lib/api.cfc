@@ -51,7 +51,8 @@ component {
 		"html" = ["text/html"],
 		"json" = ["text/json","application/json"]
 	};
-	this.requestProcessors = ["addHeadFlag","addCORS","addHandler","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters","executeEndpointFunction"];
+	this.logging = {};
+	this.requestProcessors = ["addHeadFlag","addCORS","addHandler","addRequestLogging","addResponseType","addContent","addParameters","addAuthentication","addAuthorization","addPreprocessedParameters","executeEndpointFunction","addResponseLogging"];
 
 	this.originWhitelist = ["*"];
 	this.originWhitelistRegex = [];
@@ -107,6 +108,7 @@ component {
 				}
 
 				this.apis[apiname] = o;
+				this.logging[apiname] = (stMD?.bLogging) ?: false;
 				this.swagger[apiname] = duplicate(createobject("component", swaggerPath).getSwaggerAPI(metadata=stMD, prefix=this.apiPrefix & "/" & apiname, typenames=listToArray(application.fapi.getConfig("api", "contentTypes", "")), stSwagger={}));
 				addHandlers(name=apiname, metadata=stMD);
 			}
@@ -156,7 +158,8 @@ component {
 					"path" = path,
 					"permission" = structKeyExists(func, "permission") ? func.permission : "public",
 					"attrs" = duplicate(func),
-					"preprocessing" = []
+					"preprocessing" = [],
+					"logging" = this.logging[arguments.name]
 				};
 
 				if (structKeyExists(func, "parameters") and arrayLen(func.parameters)) {
@@ -327,6 +330,52 @@ component {
 
 		return [];
 	}
+
+	public array function addRequestLogging(required struct req, required struct res) {
+
+		if (arguments.req.handler.logging) {
+			thread name="logRequest#lcase(replace(arguments.req.requestId, "-", "", "ALL"))#"
+				req="#arguments.req#"
+				action="run" 
+			{
+				var stLog = application.fapi.getContentObject(typename="apiLogging", objectid=createUUID());
+				stLog.req = serializeJSON(arguments.req);
+				stLog.event = "request";
+				stLog.requestId = arguments.req.requestId;
+				stLog.datetimecreated = request.apiRequestDateTime;
+				application.fapi.setData(stProperties=stLog);
+			}
+
+			// debugging
+			// systemOutput(serializeJSON(arguments.req), true);
+		}
+
+		return [];
+	}	
+
+	public array function addResponseLogging(required struct req, required struct res) {
+
+		if (arguments.req.handler.logging) {
+			thread name="logResponse#lcase(replace(arguments.req.requestId, "-", "", "ALL"))#"
+				req="#arguments.req#"
+				res="#arguments.res#"
+				action="run"
+			{
+				var stLog = application.fapi.getContentObject(typename="apiLogging", objectid=createUUID());
+				stLog.req = serializeJSON(arguments.req);
+				stLog.res = serializeJSON(arguments.res);
+				stLog.event = "response";
+				stLog.requestId = arguments.req.requestId;
+				stLog.datetimecreated = request.apiRequestDateTime;
+				application.fapi.setData(stProperties=stLog);
+			}
+
+			// debugging
+			// systemOutput(serializeJSON(arguments.res), true);
+		}
+
+		return [];
+	}	
 
 	public array function addCORS(required struct req, required struct res) {
 		var regex = "";
