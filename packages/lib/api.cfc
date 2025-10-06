@@ -338,12 +338,31 @@ component {
 				req="#arguments.req#"
 				action="run" 
 			{
-				var stLog = application.fapi.getContentObject(typename="apiLogging", objectid=createUUID());
-				stLog.req = serializeJSON(arguments.req);
-				stLog.event = "request";
-				stLog.requestId = arguments.req.requestId;
-				stLog.datetimecreated = request.apiRequestDateTime;
-				application.fapi.setData(stProperties=stLog);
+				var stLog = {
+					"objectid": createUUID(),
+					"req": serializeJSON(arguments.req),
+					"event": "request",
+					"requestId": arguments.req.requestId,
+					"datetimecreated": request.apiRequestDateTime,
+					"datetimelastupdated": request.apiRequestDateTime
+				};
+
+				queryExecute("
+					INSERT INTO apiLogging
+					(objectid, req, event, requestId, datetimecreated, datetimelastupdated)
+					VALUES
+					(:objectid, :req, :event, :requestId, :datetimecreated, :datetimelastupdated)
+				", {
+					objectid = stLog.objectid,
+					req = stLog.req,
+					event = stLog.event,
+					requestId = stLog.requestId,
+					datetimecreated = stLog.datetimecreated,
+					datetimelastupdated = stLog.datetimelastupdated
+				}, {
+					datasource = application.dsn
+				});
+
 			}
 
 			// debugging
@@ -361,13 +380,33 @@ component {
 				res="#arguments.res#"
 				action="run"
 			{
-				var stLog = application.fapi.getContentObject(typename="apiLogging", objectid=createUUID());
-				stLog.req = serializeJSON(arguments.req);
-				stLog.res = serializeJSON(arguments.res);
-				stLog.event = "response";
-				stLog.requestId = arguments.req.requestId;
-				stLog.datetimecreated = request.apiRequestDateTime;
-				application.fapi.setData(stProperties=stLog);
+				var stLog = { 
+					"objectid": createUUID(),
+					"req": serializeJSON(arguments.req),
+					"res": serializeJSON(arguments.res),
+					"event": "response",
+					"requestId": arguments.req.requestId,
+					"datetimecreated": request.apiRequestDateTime,
+					"datetimelastupdated": request.apiRequestDateTime
+				};
+
+				queryExecute("
+					INSERT INTO apiLogging
+					(objectid, req, res, event, requestId, datetimecreated, datetimelastupdated)
+					VALUES
+					(:objectid, :req, :res, :event, :requestId, :datetimecreated, :datetimelastupdated)
+				", {
+					objectid = stLog.objectid,
+					req = stLog.req,
+					res = stLog.res,
+					event = stLog.event,
+					requestId = stLog.requestId,
+					datetimecreated = stLog.datetimecreated,
+					datetimelastupdated = stLog.datetimelastupdated
+				}, {
+					datasource = application.dsn
+				});
+
 			}
 
 			// debugging
